@@ -3,8 +3,6 @@ import sys
 import tokenize
 import os
 import platform
-import tty
-import termios
 
 COLOR = "\033[93m"
 RESET = "\033[0m"
