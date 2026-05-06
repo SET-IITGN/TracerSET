@@ -16,8 +16,18 @@ def getch():
 class VariableTracer:
     def __init__(self, script_path):
         self.script_path = script_path
+        self.script_dir = os.path.dirname(self.script_path)
         self.user_vars = set()
         self.linecache_cache = {}
+        
+        # Setup local imports
+        self.original_path = sys.path.copy()
+        if self.script_dir not in sys.path:
+            sys.path.insert(0, self.script_dir)
+    
+    def cleanup(self):
+        """Restore original sys.path."""
+        sys.path[:] = self.original_path
         
     def extract_user_variables(self):
         """Extract ALL user-defined variable names using comprehensive AST analysis."""
@@ -278,6 +288,7 @@ def main():
         traceback.print_exc()
     finally:
         sys.settrace(None)
+        tracer.cleanup()
     
 if __name__ == "__main__":
     main()
