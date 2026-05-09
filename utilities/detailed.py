@@ -1,5 +1,3 @@
-#Generated with the assistance of Perplexity AI
-
 import sys
 import ast
 import traceback
@@ -24,6 +22,9 @@ class VariableTracer:
         self.original_path = sys.path.copy()
         if self.script_dir not in sys.path:
             sys.path.insert(0, self.script_dir)
+            
+        self.project_root = os.path.dirname(os.path.abspath(self.script_path))
+        self.tracer_file = os.path.abspath(__file__)
     
     def cleanup(self):
         """Restore original sys.path."""
@@ -160,7 +161,7 @@ class VariableTracer:
             except:
                 self.linecache_cache[key] = f"<line {line_no} unavailable>"
         return self.linecache_cache[key]
-    
+    '''
     def create_tracer(self):
         """Create the line-by-line tracer."""
         def tracer(frame, event, arg):
@@ -202,6 +203,300 @@ class VariableTracer:
             return tracer
         
         return tracer
+    '''
+    
+    def create_tracer(self):
+
+        call_depth = 0
+
+        def format_args(frame):
+            args = []
+
+            for name, value in frame.f_locals.items():
+                try:
+                    args.append(f"{name}={repr(value)}")
+                except Exception:
+                    args.append(f"{name}=<unrepr-able>")
+
+            return ", ".join(args)
+        def get_filtered_vars(frame):
+
+            globals_dict = self._safe_repr_dict(frame.f_globals)
+            locals_dict = self._safe_repr_dict(frame.f_locals)
+
+            globals_dict = {
+                k: v for k, v in globals_dict.items()
+                if not k.startswith('__')
+            }
+
+            locals_dict = {
+                k: v for k, v in locals_dict.items()
+                if not k.startswith('__')
+            }
+
+            return globals_dict, locals_dict
+
+        '''
+        def get_stack(frame):
+            stack = []
+
+            current = frame
+
+            while current:
+                stack.append(
+                    (
+                        current.f_code.co_name,
+                        current.f_lineno
+                    )
+                )
+                current = current.f_back
+
+            stack.reverse()
+            return stack
+
+        def print_stack(frame, active_only=False):
+
+            stack = get_stack(frame)
+
+            print("\nRUNTIME STACK:")
+
+            for depth, (func, lineno) in enumerate(stack):
+
+                indent = "│   " * depth
+
+                if depth == len(stack) - 1:
+                    marker = "└── ACTIVE"
+                else:
+                    marker = "├──"
+
+                if active_only and depth != len(stack) - 1:
+                    continue
+
+                print(
+                    f"{indent}{marker} "
+                    #f"{func}() [line {lineno}]"
+                    f"{func}() "
+                    f"[{os.path.basename(current.f_code.co_filename)}:{lineno}]"
+                )
+        '''
+        '''
+        def get_stack(frame):
+
+            stack = []
+
+            current = frame
+
+            while current:
+
+                stack.append(
+                    (
+                        current.f_code.co_name,
+                        current.f_lineno,
+                        current.f_code.co_filename
+                    )
+                )
+
+                current = current.f_back
+
+            stack.reverse()
+
+            return stack
+        '''
+        def get_stack(frame):
+
+            stack = []
+            current = frame
+            while current:
+                filename = os.path.abspath(
+                current.f_code.co_filename
+                )
+
+                # Ignore tracer implementation frames
+                #if os.path.basename(filename) != "detailed.py":
+                basename = os.path.basename(filename)
+                if (basename != "detailed.py" and "<frozen importlib" not in filename):
+                    stack.append(
+                    (
+                        current.f_code.co_name,
+                        current.f_lineno,
+                        filename
+                    )
+                )
+                current = current.f_back
+            stack.reverse()
+            return stack  
+
+        def print_stack(frame, active_only=False, event_type=None):
+
+            stack = get_stack(frame)
+
+            print("\nRUNTIME STACK:")
+
+            for depth, (func, lineno, filename) in enumerate(stack):
+
+                indent = "│   " * depth
+
+                if depth == len(stack) - 1:
+                    if event_type == "return":
+                        marker = "└── RETURNING"
+                    else:
+                        marker = "└── ACTIVE"
+                else:
+                    marker = "├──"
+
+                if active_only and depth != len(stack) - 1:
+                    continue
+
+                print(
+                    f"{indent}{marker} "
+                    f"{func}() "
+                    f"[{os.path.basename(filename)}:{lineno}]"
+                )
+                
+        def tracer(frame, event, arg):
+ 
+            nonlocal call_depth
+            filename = os.path.abspath(frame.f_code.co_filename)
+            
+            # Ignore the tracer implementation itself
+            if os.path.basename(filename) == "detailed.py":
+                return tracer
+
+            # Ignore non-user code
+            if not filename.startswith(self.project_root):
+                return tracer
+
+            # Ignore Python internals / virtual envs / site-packages
+            exclude_dirs = (
+                sys.prefix,
+                sys.exec_prefix,
+            )
+
+            if filename.startswith(exclude_dirs):
+                return tracer    
+
+            func_name = frame.f_code.co_name
+
+            # ==========================================================
+            # FUNCTION CALL
+            # ==========================================================
+            if event == 'call':
+                
+                indent = "│   " * call_depth
+
+                args_str = format_args(frame)
+                '''
+                print(f"\n{indent}┌─ CALL depth={call_depth}")
+                print(f"{indent}│  Function : {func_name}({args_str})")
+                print(f"{indent}│  Line     : {frame.f_lineno}")
+                '''
+                globals_dict, locals_dict = get_filtered_vars(frame)
+
+                print(f"\n{indent}┌─ CALL depth={call_depth}")
+                print(f"{indent}│  Function : {func_name}({args_str})")
+                print(f"{indent}│  Line     : {frame.f_lineno}")
+                '''
+                print(f"{indent}│  LOCALS   : {locals_dict}")
+                print(f"{indent}│  GLOBALS  : {globals_dict}")
+                print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
+                getch()
+                '''
+                print_stack(frame, active_only=False)
+
+                print(f"{indent}└────────────────────────────────")
+
+                call_depth += 1
+
+                return tracer
+
+            # ==========================================================
+            # FUNCTION RETURN
+            # ==========================================================
+            elif event == 'return':
+
+                '''                
+                call_depth -= 1
+                indent = "│   " * call_depth
+                '''
+                
+                indent = "│   " * (call_depth - 1)
+                print(f"\n{indent}┌─ RETURN depth={call_depth - 1}")
+                print(f"{indent}│  Function : {func_name}()")
+                
+                globals_dict, locals_dict = get_filtered_vars(frame)
+
+                print(f"{indent}│  LOCALS   : {locals_dict}")
+                print(f"{indent}│  GLOBALS  : {globals_dict}")
+                print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
+                getch()
+
+                try:
+                    print(f"{indent}│  Returned : {repr(arg)}")
+                except Exception:
+                    print(f"{indent}│  Returned : <unrepr-able>")
+
+                if frame.f_back:
+                    print_stack(frame.f_back, active_only=True)
+
+                print(f"{indent}└────────────────────────────────")
+                '''
+                print(f"{COLOR}Press Enter key to return from {func_name}(){RESET}")
+                getch()
+                '''
+                call_depth -= 1
+                return tracer
+
+            # ==========================================================
+            # LINE EXECUTION
+            # ==========================================================
+            elif event == 'line':
+ 
+                line_no = frame.f_lineno
+
+                line_source = self.get_line_source(
+                    filename,
+                    line_no
+                )
+
+                stripped = line_source.strip()
+
+                if (
+                    not stripped or
+                    stripped.startswith('#') or
+                    stripped == 'pass'
+                ):
+                    return tracer
+
+                indent = "│   " * call_depth
+
+                globals_dict = self._safe_repr_dict(frame.f_globals)
+                locals_dict = self._safe_repr_dict(frame.f_locals)
+
+                globals_dict = {
+                    k: v for k, v in globals_dict.items()
+                    #if k in self.user_vars
+                    if not k.startswith('__')
+                }
+
+                locals_dict = {
+                    k: v for k, v in locals_dict.items()
+                    #if k in self.user_vars
+                    if not k.startswith('__')
+                }
+
+                print(f"\n{indent}├─ LINE {line_no}")
+                print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+                print(f"{indent}│  LOCALS  : {locals_dict}")
+                print(f"{indent}│  GLOBALS : {globals_dict}")
+                print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
+                getch()
+
+                return tracer
+
+            return tracer
+
+        return tracer
+    
     
     def _safe_repr_dict(self, dct):
         """Safely convert dictionary values to repr strings."""

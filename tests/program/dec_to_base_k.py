@@ -1,6 +1,6 @@
 def fun():
-	n=int(input())
-	b=int(input())
+	n=5 #int(input())
+	b=2 #int(input())
 	s=0
 	p=0
 	while n>0:
