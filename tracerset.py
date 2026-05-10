@@ -43,11 +43,18 @@ try:
 	print("=========")
 	print(dump)
 	'''
-	#display AST
-	print(f"\n{COLOR}Press Enter key to continue to [Syntax]{RESET}")
+	#display CST
+	print(f"\n{COLOR}Press Enter key to continue to [Concrete Syntax]{RESET}")
 	getch()
-	print("[Syntax]:")
-	print("=========")
+	print("[Concrete Syntax]:")
+	print("==================")
+	os.system(f"python{'.'.join(platform.python_version().split('.')[:2])} utilities/cst2dot.py {sys.argv[1]}")
+	
+	#display AST
+	print(f"\n{COLOR}Press Enter key to continue to [Abstract Syntax]{RESET}")
+	getch()
+	print("[Abstract Syntax]:")
+	print("==================")
 	os.system(f"python{'.'.join(platform.python_version().split('.')[:2])} utilities/ast2dot.py {sys.argv[1]}")
 	
 	#display disassembled output of the source code 
