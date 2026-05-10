@@ -510,7 +510,7 @@ class VariableTracer:
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python P.py <script.py>")
+        print("Usage: python3 P.py <script.py>")
         print("\nComprehensive Python Variable Tracer:")
         print("• Tracks ALL user-defined local/global variables")
         print("• Handles classes, functions, comprehensions, context managers")

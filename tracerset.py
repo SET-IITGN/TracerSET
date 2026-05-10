@@ -35,13 +35,20 @@ try:
 		for token in tokens:
 			print(token)
 		f.close()
-	
+	'''
 	#display AST (indent as hierarchy)
 	print(f"\n{COLOR}Press Enter key to continue to [Syntax]{RESET}")
 	getch()
 	print("[Syntax]:")
 	print("=========")
 	print(dump)
+	'''
+	#display AST
+	print(f"\n{COLOR}Press Enter key to continue to [Syntax]{RESET}")
+	getch()
+	print("[Syntax]:")
+	print("=========")
+	os.system(f"python{'.'.join(platform.python_version().split('.')[:2])} utilities/ast2dot.py {sys.argv[1]}")
 	
 	#display disassembled output of the source code 
 	print(f"\n{COLOR}Press Enter key to continue to [Disassembly]{RESET}")
