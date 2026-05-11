@@ -10,6 +10,7 @@ RESET = "\033[0m"
 
 def getch():
     sys.stdin.read(1)
+    #input()
 
 class VariableTracer:
     def __init__(self, script_path):
