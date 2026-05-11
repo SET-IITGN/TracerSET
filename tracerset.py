@@ -114,22 +114,15 @@ def show_execution_trace(filename):
 
 def show_step_by_step_trace(filename):
     pause("[Step-by-step Program Execution]")
-
-    #print("[Step-by-step Program Execution]:")
     print("=================================")
-
     pycmd = get_python_cmd()
-
     os.system(
         f"{pycmd} utilities/detailed.py {filename}"
     )
 
 def show_ast_dump(parsed_ast):
     pause("[AST Hierarchy]")
-
-    #print("[AST Hierarchy]:")
     print("================")
-
     print(ast.dump(parsed_ast, indent=2))
 
 # ============================================================
