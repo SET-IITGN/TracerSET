@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     generator = ASTDotGenerator()
     dot_output = generator.generate(filename)
-    output_file = filename.replace(".py", ".dot")
+    output_file = filename.replace(".py", "ast.dot")
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(dot_output)

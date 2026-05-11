@@ -130,7 +130,6 @@ class VariableTracer:
     def _get_exclude_set(self):
         """Get comprehensive set of names to exclude."""
         builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
-        
         exclude = builtins.copy()
         exclude.update([
             # Python internals
@@ -162,57 +161,11 @@ class VariableTracer:
             except:
                 self.linecache_cache[key] = f"<line {line_no} unavailable>"
         return self.linecache_cache[key]
-    '''
-    def create_tracer(self):
-        """Create the line-by-line tracer."""
-        def tracer(frame, event, arg):
-            if event != 'line':
-                return tracer
-            
-            line_no = frame.f_lineno
-            filename = frame.f_code.co_filename
-            
-            # Skip if not our main script
-            if not filename.endswith(self.script_path):
-                return tracer
-            
-            line_source = self.get_line_source(filename, line_no)
-            
-            # Skip empty lines, comments, and pass statements
-            stripped = line_source.strip()
-            if (not stripped or 
-                stripped.startswith('#') or 
-                stripped == 'pass' or
-                stripped.startswith('pass')):
-                return tracer
-            
-            # Get safe variable representations
-            globals_dict = self._safe_repr_dict(frame.f_globals)
-            locals_dict = self._safe_repr_dict(frame.f_locals)
-            
-            # Filter to user-defined variables only
-            globals_dict = {k: v for k, v in globals_dict.items() if k in self.user_vars}
-            locals_dict = {k: v for k, v in locals_dict.items() if k in self.user_vars}
-            
-            print(f"\n{'-'*80}")
-            print(f"LINE {line_no:3d} | {COLOR}{line_source}{RESET}")
-            print(f"{'-'*80}")
-            print(f"GLOBAL VARIABLES ({len(globals_dict)}): {globals_dict}")
-            print(f"LOCAL  VARIABLES ({len(locals_dict)}): {locals_dict}")
-            print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
-            getch()
-            return tracer
-        
-        return tracer
-    '''
     
     def create_tracer(self):
-
         call_depth = 0
-
         def format_args(frame):
             args = []
-
             for name, value in frame.f_locals.items():
                 try:
                     args.append(f"{name}={repr(value)}")
@@ -221,7 +174,6 @@ class VariableTracer:
 
             return ", ".join(args)
         def get_filtered_vars(frame):
-
             globals_dict = self._safe_repr_dict(frame.f_globals)
             locals_dict = self._safe_repr_dict(frame.f_locals)
 
@@ -237,72 +189,6 @@ class VariableTracer:
 
             return globals_dict, locals_dict
 
-        '''
-        def get_stack(frame):
-            stack = []
-
-            current = frame
-
-            while current:
-                stack.append(
-                    (
-                        current.f_code.co_name,
-                        current.f_lineno
-                    )
-                )
-                current = current.f_back
-
-            stack.reverse()
-            return stack
-
-        def print_stack(frame, active_only=False):
-
-            stack = get_stack(frame)
-
-            print("\nRUNTIME STACK:")
-
-            for depth, (func, lineno) in enumerate(stack):
-
-                indent = "│   " * depth
-
-                if depth == len(stack) - 1:
-                    marker = "└── ACTIVE"
-                else:
-                    marker = "├──"
-
-                if active_only and depth != len(stack) - 1:
-                    continue
-
-                print(
-                    f"{indent}{marker} "
-                    #f"{func}() [line {lineno}]"
-                    f"{func}() "
-                    f"[{os.path.basename(current.f_code.co_filename)}:{lineno}]"
-                )
-        '''
-        '''
-        def get_stack(frame):
-
-            stack = []
-
-            current = frame
-
-            while current:
-
-                stack.append(
-                    (
-                        current.f_code.co_name,
-                        current.f_lineno,
-                        current.f_code.co_filename
-                    )
-                )
-
-                current = current.f_back
-
-            stack.reverse()
-
-            return stack
-        '''
         def get_stack(frame):
 
             stack = []
@@ -328,15 +214,10 @@ class VariableTracer:
             return stack  
 
         def print_stack(frame, active_only=False, event_type=None):
-
             stack = get_stack(frame)
-
             print("\nRUNTIME STACK:")
-
             for depth, (func, lineno, filename) in enumerate(stack):
-
                 indent = "│   " * depth
-
                 if depth == len(stack) - 1:
                     if event_type == "return":
                         marker = "└── RETURNING"
@@ -355,7 +236,6 @@ class VariableTracer:
                 )
                 
         def tracer(frame, event, arg):
- 
             nonlocal call_depth
             filename = os.path.abspath(frame.f_code.co_filename)
             
@@ -382,32 +262,17 @@ class VariableTracer:
             # FUNCTION CALL
             # ==========================================================
             if event == 'call':
-                
                 indent = "│   " * call_depth
-
                 args_str = format_args(frame)
-                '''
-                print(f"\n{indent}┌─ CALL depth={call_depth}")
-                print(f"{indent}│  Function : {func_name}({args_str})")
-                print(f"{indent}│  Line     : {frame.f_lineno}")
-                '''
                 globals_dict, locals_dict = get_filtered_vars(frame)
 
                 print(f"\n{indent}┌─ CALL depth={call_depth}")
                 print(f"{indent}│  Function : {func_name}({args_str})")
                 print(f"{indent}│  Line     : {frame.f_lineno}")
-                '''
-                print(f"{indent}│  LOCALS   : {locals_dict}")
-                print(f"{indent}│  GLOBALS  : {globals_dict}")
-                print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
-                getch()
-                '''
                 print_stack(frame, active_only=False)
 
                 print(f"{indent}└────────────────────────────────")
-
                 call_depth += 1
-
                 return tracer
 
             # ==========================================================
@@ -415,11 +280,6 @@ class VariableTracer:
             # ==========================================================
             elif event == 'return':
 
-                '''                
-                call_depth -= 1
-                indent = "│   " * call_depth
-                '''
-                
                 indent = "│   " * (call_depth - 1)
                 print(f"\n{indent}┌─ RETURN depth={call_depth - 1}")
                 print(f"{indent}│  Function : {func_name}()")
@@ -440,10 +300,6 @@ class VariableTracer:
                     print_stack(frame.f_back, active_only=True)
 
                 print(f"{indent}└────────────────────────────────")
-                '''
-                print(f"{COLOR}Press Enter key to return from {func_name}(){RESET}")
-                getch()
-                '''
                 call_depth -= 1
                 return tracer
 
@@ -453,7 +309,6 @@ class VariableTracer:
             elif event == 'line':
  
                 line_no = frame.f_lineno
-
                 line_source = self.get_line_source(
                     filename,
                     line_no
@@ -493,11 +348,8 @@ class VariableTracer:
                 getch()
 
                 return tracer
-
             return tracer
-
         return tracer
-    
     
     def _safe_repr_dict(self, dct):
         """Safely convert dictionary values to repr strings."""
