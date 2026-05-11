@@ -141,7 +141,7 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     generator = CSTDotGenerator()
     dot_output = generator.generate(filename)
-    output_file = filename.replace(".py", ".dot")
+    output_file = filename.replace(".py", ".cst.dot")
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(dot_output)
