@@ -83,10 +83,13 @@ def show_tokens(filename):
 def show_control_flow_graph(filename):
     pause("[Control Flow Graph (CFG)]")
     print("==========================")
-    pycmd = get_python_cmd()
-    os.system(
-        f"{pycmd} -m python_ta.cfg {filename}"
-    )
+    try:
+        import python_ta.cfg as cfg
+        cfg.generate_cfg(filename)
+    except:
+        pycmd = get_python_cmd() #if import fails!
+        os.system(f"{pycmd} -m python_ta.cfg {filename}")
+        
     fname=filename.split('/')[::-1][0]
     src=fname.replace(".py",".gv")
     dest=filename.replace(".py",".cfg.dot")

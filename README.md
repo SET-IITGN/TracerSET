@@ -12,4 +12,5 @@ Preliminary testing has been done on {Unix/Linux, Windows} Operating Systems. Pr
 ```
 libcst==1.8.6
 pytest==8.4.1
+python_ta==2.12.1
 ```
