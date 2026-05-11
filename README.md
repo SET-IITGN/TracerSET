@@ -3,6 +3,7 @@
 Requires Python3.10 or better.
 ```
 Usage:
+       python3 tracerset.py <file.py> #defaults to beginner
        python3 tracerset.py beginner <file.py>
        python3 tracerset.py intermediate <file.py>
        python3 tracerset.py advanced <file.py>
