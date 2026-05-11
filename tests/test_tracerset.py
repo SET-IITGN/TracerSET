@@ -10,7 +10,7 @@ TRACER = ROOT / "tracerset.py"
 TESTCASE_DIR = ROOT / "tests" / "program"
 LIST_FILE = TESTCASE_DIR / "list.txt"
 
-MODES=["beginner","intermediate","advanced"]
+MODES=[None,"beginner","intermediate","advanced"]
 
 def load_program():
     program = []
@@ -30,12 +30,20 @@ def load_program():
 def test_tracer_runs(program):
 
     for i in MODES:
-        result = subprocess.run(
-            [sys.executable, str(TRACER), str(i), str(program)],
-            capture_output=True,
-            input="\n"*1000,
-            text=True,
-        )
+        if i is not None:
+            result = subprocess.run(
+                [sys.executable, str(TRACER), str(i), str(program)],
+                capture_output=True,
+                input="\n"*1000,
+                text=True,
+            )
+        else:
+            result = subprocess.run(
+                [sys.executable, str(TRACER),str(program)],
+                capture_output=True,
+                input="\n"*1000,
+                text=True,
+            )
 
         if result.stderr:
             print(result.stderr)
