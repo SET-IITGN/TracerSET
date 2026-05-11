@@ -136,9 +136,9 @@ def get_mode():
             mode='beginner'
         else:
             print(f'''{COLOR}Usage:
-            python3 tracerset.py beginner file.py 
-            python3 tracerset.py intermediate file.py
-            python3 tracerset.py advanced file.py{RESET}''')
+       python3 tracerset.py beginner <file.py> 
+       python3 tracerset.py intermediate <file.py>
+       python3 tracerset.py advanced <file.py>{RESET}''')
             sys.exit(1)
     else:
         mode = sys.argv[1].lower()
