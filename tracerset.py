@@ -80,6 +80,20 @@ def show_tokens(filename):
         for token in tokens:
             print(token)
 
+def show_control_flow_graph(filename):
+    pause("[Control Flow Graph (CFG)]")
+    print("==========================")
+    pycmd = get_python_cmd()
+    os.system(
+        f"{pycmd} -m python_ta.cfg {filename}"
+    )
+    fname=filename.split('/')[::-1][0]
+    src=fname.replace(".py",".gv")
+    dest=filename.replace(".py",".cfg.dot")
+    os.system(f"rm -f *.svg; mv {src} {dest}")
+    print(f"DOT file written to: {dest}")
+    os.system(f"xdot {dest}")
+    
 def show_concrete_syntax_tree(filename):
     pause("[Concrete Syntax Tree (CST)]")
     print("===============================")
@@ -196,6 +210,11 @@ def main():
     # Always show source code
     # --------------------------------------------------------
     show_source_code(buff)
+    
+    # --------------------------------------------------------
+    # Always show control flow graph
+    # --------------------------------------------------------
+    show_control_flow_graph(filename)
 
     # --------------------------------------------------------
     # ADVANCED MODE
