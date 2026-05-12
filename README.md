@@ -7,6 +7,7 @@ Usage:
        python3 tracerset.py intermediate <file.py>
        python3 tracerset.py advanced <file.py>
 ```
+<img width="1920" height="867" alt="tracerset" src="https://github.com/user-attachments/assets/5f844c58-260c-43d5-b75c-43dd4f446dc3" />
 Preliminary testing has been done with Python{3.10,3.11,3.12} on {Unix/Linux, Windows}. Present dependencies (using pip3 install) are as follows:
 ```
 graphviz
