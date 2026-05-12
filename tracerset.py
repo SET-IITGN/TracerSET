@@ -83,19 +83,37 @@ def show_tokens(filename):
 def show_control_flow_graph(filename):
     pause("[Control Flow Graph (CFG)]")
     print("==========================")
+    
     try:
         import python_ta.cfg as cfg
         cfg.generate_cfg(filename)
+        print(filename)
     except:
         pycmd = get_python_cmd() #if import fails!
         os.system(f"{pycmd} -m python_ta.cfg {filename}")
-        
-    fname=filename.split('/')[::-1][0]
-    src=fname.replace(".py",".gv")
-    dest=filename.replace(".py",".cfg.dot")
-    os.system(f"rm -f *.svg; mv {src} {dest}")
-    print(f"DOT file written to: {dest}")
-    os.system(f"xdot {dest}")
+        print(f"{pycmd} -m python_ta.cfg {filename}")
+    
+    if platform.system() == 'Windows':
+        if '\\' in filename:
+            fname=filename.split('\\')[::-1][0]
+        else:
+            fname=filename.split('/')[::-1][0]
+        src=fname.replace(".py",".gv")
+        dest=filename.replace(".py",".cfg.png")
+        print(src,fname,dest)
+        os.system(f"dot -Tpng {src} > {dest}")
+        print(f"DOT file written to: {dest}")
+        os.system(f"start {dest}")
+    elif platform.system() == 'Linux':
+        fname=filename.split('/')[::-1][0]
+        src=fname.replace(".py",".gv")
+        dest=filename.replace(".py",".cfg.dot")
+        os.system(f"rm -f *.svg; mv {src} {dest}")
+        print(f"DOT file written to: {dest}")
+        os.system(f"xdot {dest}")
+    else:
+        print("Platform not supported yet!")
+        exit(-1)
     
 def show_concrete_syntax_tree(filename):
     pause("[Concrete Syntax Tree (CST)]")

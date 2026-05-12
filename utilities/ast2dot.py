@@ -3,6 +3,7 @@
 import ast
 import sys
 import os
+import platform
 
 class ASTDotGenerator:
     def __init__(self):
@@ -123,10 +124,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     filename = sys.argv[1]
-
     with open(filename, "r", encoding="utf-8") as f:
         source = f.read()
-
     generator = ASTDotGenerator()
     dot_output = generator.generate(filename)
     output_file = filename.replace(".py", ".ast.dot")
@@ -134,7 +133,15 @@ if __name__ == "__main__":
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(dot_output)
 
-    print(f"DOT file written to: {output_file}")
-    os.system(f"xdot {output_file}")
+    if platform.system() == 'Windows':
+        os.system(f"dot -Tpng {output_file} > {output_file}.png")
+        print(f"DOT file written to: {output_file}.png")
+        os.system(f"start {output_file}.png")
+    elif platform.system() == 'Linux':
+        print(f"DOT file written to: {output_file}")
+        os.system(f"xdot {output_file}")
+    else:
+        print("Platform not supported yet!")
+        exit(-1)
     
     

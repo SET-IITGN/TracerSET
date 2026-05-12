@@ -2,6 +2,7 @@
 import libcst as cst
 import sys
 import os
+import platform
 
 class CSTDotGenerator:
     def __init__(self):
@@ -145,5 +146,14 @@ if __name__ == "__main__":
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(dot_output)
-    print(f"DOT file written to: {output_file}")
-    os.system(f"xdot {output_file}")
+    
+    if platform.system() == 'Windows':
+        os.system(f"dot -Tpng {output_file} > {output_file}.png")
+        print(f"DOT file written to: {output_file}.png")
+        os.system(f"start {output_file}.png")
+    elif platform.system() == 'Linux':
+        print(f"DOT file written to: {output_file}")
+        os.system(f"xdot {output_file}")
+    else:
+        print("Platform not supported yet!")
+        exit(-1)
