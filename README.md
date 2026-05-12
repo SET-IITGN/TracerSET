@@ -7,7 +7,7 @@ Usage:
        python3 tracerset.py intermediate <file.py>
        python3 tracerset.py advanced <file.py>
 ```
-Preliminary testing has been done with Python{3.10,3.11} on {Unix/Linux (L), Windows (W)}. Present dependencies (using pip3 install) are as follows:
+Preliminary testing has been done with Python{3.10,3.11,3.12} on {Unix/Linux, Windows}. Present dependencies (using pip3 install) are as follows:
 ```
 graphviz
 libcst
