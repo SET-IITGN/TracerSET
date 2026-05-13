@@ -162,6 +162,28 @@ class VariableTracer:
                 self.linecache_cache[key] = f"<line {line_no} unavailable>"
         return self.linecache_cache[key]
     
+    def print_code_file(self, filename, current_line):
+        print("\n" + "─" * 60)
+        print(f"FILE : {os.path.basename(filename)}\n")
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except Exception:
+            print("<unable to read source file>")
+            print("─" * 60)
+            return
+
+        for lineno, source in enumerate(lines, start=1):
+            source = source.rstrip('\n\r')
+            marker = "--> " if lineno == current_line else "    "
+            color = COLOR if lineno == current_line else RESET
+            print(
+                f"{color}"
+                f"{marker}{lineno:>3} │ {source}"
+                f"{RESET}"
+            )
+        print("\n" + "─" * 60)
+    
     def create_tracer(self):
         call_depth = 0
         def format_args(frame):
@@ -174,16 +196,25 @@ class VariableTracer:
 
             return ", ".join(args)
         def get_filtered_vars(frame):
-            globals_dict = self._safe_repr_dict(frame.f_globals)
-            locals_dict = self._safe_repr_dict(frame.f_locals)
+            globals_raw = self._safe_repr_dict(frame.f_globals)
+            locals_raw = self._safe_repr_dict(frame.f_locals)
+
+            def transform(v, k):
+                if '<module' in v:
+                    return '<module>'
+                if '<function' in v:
+                    return '<function>'
+                return v
 
             globals_dict = {
-                k: v for k, v in globals_dict.items()
+                k: transform(v, k)
+                for k, v in globals_raw.items()
                 if not k.startswith('__')
             }
 
             locals_dict = {
-                k: v for k, v in locals_dict.items()
+                k: transform(v, k)
+                for k, v in locals_raw.items()
                 if not k.startswith('__')
             }
 
@@ -267,7 +298,11 @@ class VariableTracer:
                 globals_dict, locals_dict = get_filtered_vars(frame)
 
                 print(f"\n{indent}┌─ CALL depth={call_depth}")
-                print(f"{indent}│  Function : {func_name}({args_str})")
+                #print(f"{indent}│  Function : {func_name}({args_str})")
+                if func_name == "<module>":
+                    print(f"{indent}│  Function : <module>()")
+                else:
+                    print(f"{indent}│  Function : {func_name}({args_str})")
                 print(f"{indent}│  Line     : {frame.f_lineno}")
                 print_stack(frame, active_only=False)
 
@@ -325,25 +360,15 @@ class VariableTracer:
 
                 indent = "│   " * call_depth
 
-                globals_dict = self._safe_repr_dict(frame.f_globals)
-                locals_dict = self._safe_repr_dict(frame.f_locals)
-
-                globals_dict = {
-                    k: v for k, v in globals_dict.items()
-                    #if k in self.user_vars
-                    if not k.startswith('__')
-                }
-
-                locals_dict = {
-                    k: v for k, v in locals_dict.items()
-                    #if k in self.user_vars
-                    if not k.startswith('__')
-                }
-
+                globals_dict, locals_dict = get_filtered_vars(frame)
+                
+                self.print_code_file(filename, line_no)
                 print(f"\n{indent}├─ LINE {line_no}")
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+                #self.print_code_file(filename, line_no)
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
+                #self.print_code_file(filename, line_no)
                 print(f"{COLOR}Press Enter key to continue to next statement{RESET}")
                 getch()
 
@@ -356,7 +381,11 @@ class VariableTracer:
         result = {}
         for k, v in dct.items():
             try:
-                result[k] = repr(v)
+                #result[k] = repr(v)
+                if isinstance(v, types.FunctionType):
+                    result[k] = f"<function {v.__name__}>" #reduce-noise
+                else:
+                    result[k] = repr(v)
             except Exception:
                 result[k] = f"<{type(v).__name__}: unrepresentable>"
         return result
