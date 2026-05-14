@@ -139,7 +139,7 @@ if __name__ == "__main__":
         os.system(f"start {output_file}.png")
     elif platform.system() == 'Linux':
         print(f"DOT file written to: {output_file}")
-        os.system(f"xdot {output_file}")
+        os.system(f"xdot {output_file} 2> /dev/null")
     else:
         print("Platform not supported yet!")
         exit(-1)

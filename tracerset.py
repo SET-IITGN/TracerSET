@@ -110,7 +110,7 @@ def show_control_flow_graph(filename):
         dest=filename.replace(".py",".cfg.dot")
         os.system(f"rm -f *.svg; mv {src} {dest}")
         print(f"DOT file written to: {dest}")
-        os.system(f"xdot {dest}")
+        os.system(f"xdot {dest} 2> /dev/null")
     else:
         print("Platform not supported yet!")
         exit(-1)
