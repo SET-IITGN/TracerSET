@@ -18,7 +18,7 @@ Usage:
 - *...coming soon*
 
 ## Dependencies
-Preliminary testing has been done with Python{3.10,3.11,3.12} on {Unix/Linux, Windows}. Present dependencies (using ```pip3 install ...```) are as follows:
+Preliminary testing has been done with Python{3.10,3.11,3.12} on {Unix/Linux, Windows}. Present dependencies are as follows:
 ```
 graphviz
 libcst
