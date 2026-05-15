@@ -52,14 +52,15 @@ MODES = {
 # ============================================================
 
 def pause(section_name):
-    print(f"\n{COLOR}Press Enter key to continue to {section_name}{RESET}")
-    sys.stdin.read(1)
-    rows = os.get_terminal_size().lines
-    # Natural scroll
-    for _ in range(rows):
-        print()
-    # Reposition cursor
-    print("\033[H", end="", flush=True)
+    if sys.stdin.isatty():
+        print(f"\n{COLOR}Press Enter key to continue to {section_name}{RESET}")
+        sys.stdin.read(1)
+        rows = os.get_terminal_size().lines
+        # Natural scroll
+        for _ in range(rows):
+            print()
+        # Reposition cursor
+        print("\033[H", end="", flush=True)
         
 def get_python_cmd():
     return f"python{'.'.join(platform.python_version().split('.')[:2])}"

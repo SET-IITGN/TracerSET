@@ -11,16 +11,18 @@ RESET = "\033[0m"
 flag=0 
 
 def clear_screen():
-    rows = os.get_terminal_size().lines
-    # Natural scroll
-    for _ in range(rows):
-        print()
-    # Reposition cursor
-    print("\033[H", end="", flush=True)
+    if sys.stdin.isatty():
+        rows = os.get_terminal_size().lines
+        # Natural scroll
+        for _ in range(rows):
+            print()
+        # Reposition cursor
+        print("\033[H", end="", flush=True)
 
 def getch():
-    sys.stdin.read(1)
-    clear_screen()
+    if sys.stdin.isatty():
+        sys.stdin.read(1)
+        clear_screen()
 
 class VariableTracer:
     def __init__(self, script_path):
@@ -253,13 +255,37 @@ class VariableTracer:
                 #if os.path.basename(filename) != "detailed.py":
                 basename = os.path.basename(filename)
                 if (basename != "detailed.py" and "<frozen importlib" not in filename):
+                    '''
                     stack.append(
                     (
                         current.f_code.co_name,
                         current.f_lineno,
                         filename
-                    )
+                    )                    
                 )
+                    '''
+                    argcount = current.f_code.co_argcount
+                    argnames = current.f_code.co_varnames[:argcount]
+
+                    args = []
+                    for arg in argnames:
+                        if arg in current.f_locals:
+                            try:
+                               value = repr(current.f_locals[arg])
+                            except Exception:
+                               value = "<unreprable>"
+                            args.append(f"{arg}={value}")
+
+                    signature = ", ".join(args)
+
+                    stack.append(
+                        (
+                            f"{current.f_code.co_name}({signature})",
+                            current.f_lineno,
+                            filename
+                        )
+                    ) 
+                
                 current = current.f_back
             stack.reverse()
             return stack  
@@ -274,7 +300,7 @@ class VariableTracer:
             elif switch==1:
                 SCOLOR=COLOR
             
-            for depth, (func, lineno, filename) in enumerate(stack):
+            for depth, (func_signature, lineno, filename) in enumerate(stack):
                 indent = "│   " * depth
                 if depth == len(stack) - 1:
                     if event_type == "return":
@@ -286,10 +312,10 @@ class VariableTracer:
 
                 if active_only and depth != len(stack) - 1:
                     continue
-
+                
                 print(
                     f"{indent}{marker} "
-                    f"{func}() "
+                    f"{func_signature} "
                     f"[{os.path.basename(filename)}:{lineno}]{RESET}"
                 )
                 
@@ -372,6 +398,11 @@ class VariableTracer:
                 print(f"{indent}└────────────────────────────────")
                 '''
                 call_depth -= 1
+                
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
+                
                 return tracer
 
             # ==========================================================
@@ -416,8 +447,9 @@ class VariableTracer:
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
                 print_stack(frame, active_only=False,switch=1)
-                print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
-                getch()
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
                 
                 return tracer
             return tracer
