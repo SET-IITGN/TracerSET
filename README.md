@@ -142,7 +142,7 @@ This enables users to observe not only what a program executes, but how and why 
 
 ## Responsible Use Notice
 
-*During the preparation of the content in this repository, the developers were assisted by Generative AI to some extent. The content was reviewed and edited as needed and developers take full responsibility for the content in this repository. Regardless of this, bugs may still exist!*
+During the preparation of the content in this repository, the developers were assisted by Generative AI tools to some extent. The content was reviewed and edited as needed and developers take full responsibility for the content in this repository. Regardless of this, bugs may still exist!
 
 ## Contact
 
