@@ -1,7 +1,5 @@
 # TracerSET
-Current release: ```v1.0.4```
-
-*TracerSET provides synchronized progressive traversal across lexical, syntactic, control-flow, bytecode, and runtime execution representations for program comprehension.*
+TracerSET provides synchronized progressive traversal across lexical, syntactic, control-flow, bytecode, and runtime execution representations for program comprehension.
 ```
 Usage:
        python3 tracerset.py <file.py> #defaults to beginner
