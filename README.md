@@ -1,5 +1,5 @@
 # TracerSET
-TracerSET provides synchronized progressive traversal across lexical, syntactic, control-flow, bytecode, and runtime execution representations for program comprehension.
+TracerSET is a program comprehension framework that provides synchronized, progressive views of program execution across lexical, syntactic, control-flow, bytecode, and runtime levels.
 ```
 Usage:
        python3 tracerset.py <file.py> #defaults to beginner
