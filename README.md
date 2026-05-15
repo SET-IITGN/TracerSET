@@ -1,5 +1,5 @@
 # TracerSET
-Current release: ```v1.0.3```
+Current release: ```v1.0.4```
 ```
 Usage:
        python3 tracerset.py <file.py> #defaults to beginner
