@@ -5,3 +5,4 @@ func_locals_if_else.py
 func_locals_no_if_else.py
 multi_file.py
 pattern_5.py
+animal.py
