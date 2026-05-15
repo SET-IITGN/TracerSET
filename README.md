@@ -2,7 +2,7 @@
 
 **TracerSET — Unified Multi-Level Program Execution Tracer for Program Comprehension**
 
-TracerSET is a program comprehension tool that provides unified, multi-level views of program execution by integrating lexical structure, syntactic structure, control-flow, bytecode, and runtime execution state into a single interactive tracing environment.
+TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) tool that provides unified, multi-level views of program execution by integrating lexical structure, syntactic structure, control-flow, bytecode, and runtime execution state into a single interactive tracing environment.
 
 It enables step-by-step exploration of program behavior by aligning static program representations with dynamic runtime execution, allowing users to understand how source code evolves into execution behavior.
 
