@@ -133,10 +133,15 @@ This enables users to observe not only what a program executes, but how and why 
 
 ## Limitations
 
-- Supports Python only
-- Execution overhead due to tracing instrumentation
-- Best suited for education, learning, and research prototyping
-- Not optimized for production debugging workloads
+- Currently supports Python programs only.
+- Execution incurs runtime overhead due to tracing, AST / CST analysis, and runtime introspection.
+- Best suited for small to medium-sized programs used for education and program comprehension.
+- May produce large outputs for complex or deeply recursive programs.
+- Trace behavior may vary across Python interpreter versions and runtime environments.
+- Bytecode disassembly is based on the CPython virtual machine and may not generalize to other Python implementations such as PyPy or Jython.
+- Not intended as a replacement for production-grade debuggers or performance profilers.
+- Some visualization features depend on external tools such as Graphviz and xdot.
+- Certain advanced Python features (e.g., concurrency, dynamic code execution patterns) may not be fully supported.
 
 ---
 
