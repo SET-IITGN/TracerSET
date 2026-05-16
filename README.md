@@ -46,27 +46,57 @@ python3 tracerset.py advanced <file.py>
 ```
 
 ### ```beginner```
-Focuses on:
-- Source code execution
-- Runtime stack visualization
-- Variable state inspection
-- Step-by-step execution flow
+Focuses on **basic runtime understanding of program execution**.
+
+This mode is designed for first-time programmers to understand how a Python program runs step by step.
+
+Includes:
+- Source code display
+- Control Flow Graph (CFG)
+- Step-by-step program execution trace (custom detailed tracer)
+
+At this stage, the learner primarily observes execution flow and control structure. No internal program representations are shown.
 
 ### ```intermediate```
-Adds:
-- AST visualization (static whole-program view)
-- Execution trace analysis
-- Combined static + dynamic execution understanding
+Focuses on **connecting program structure with runtime execution**.
+
+This mode builds on beginner by introducing structural understanding of the program while still emphasizing execution.
+
+Includes:
+- Source code display
+- Control Flow Graph (CFG)
+- Abstract Syntax Tree (AST) visualization
+- Program execution trace (Python trace module output)
+- Step-by-step program execution trace (custom detailed tracer)
+
+This stage helps the learner connect:
+- how the program is structured (AST)
+- how the program executes (trace + step-by-step execution)
+
+Tokens, CST, and bytecode are not introduced yet.
 
 ### ```advanced```
-Provides full internal program representation:
-- Tokens (static analysis)
+Focuses on **full internal representation of programs and execution behavior**.
+
+This mode exposes both compiler-level structure and detailed runtime behavior for deep analysis.
+
+Includes:
+- Source code display
+- Control Flow Graph (CFG)
+- Tokens (lexical analysis)
 - Concrete Syntax Tree (CST)
 - Abstract Syntax Tree (AST)
-- Control Flow Graph (CFG)
-- Bytecode disassembly
-- Execution trace
-- Step-by-step runtime execution state inspection
+- Python bytecode disassembly
+- Program execution trace (Python trace module output)
+- Step-by-step program execution trace (custom detailed tracer)
+
+This final stage provides complete visibility into:
+- lexical structure (tokens)
+- syntactic structure (CST, AST)
+- control-flow structure (CFG)
+- bytecode-level representation
+- runtime execution behavior
+
 ---
 
 ## Screenshots
