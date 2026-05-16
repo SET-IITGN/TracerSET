@@ -4,10 +4,10 @@ import tokenize
 import os
 import platform
 
-# ============================================================
+# ===============================================================
 # TracerSET
-# Progressive Python Program Analysis and Execution Tracer
-# ============================================================
+# Execution-Centric Program Comprehension Environment for Python
+# ===============================================================
 
 COLOR = "\033[93m"
 ERROR = "\033[91m"
