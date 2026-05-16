@@ -141,7 +141,7 @@ These two perspectives are presented together to help users connect program stru
 - Best suited for small to medium-sized programs used for education and program comprehension.
 - May produce large outputs for complex or deeply recursive programs.
 - Trace behavior may vary across Python interpreter versions and runtime environments.
-- Bytecode disassembly is based on the CPython virtual machine and may not generalize to other Python implementations such as PyPy or Jython.
+- Bytecode disassembly is based on the CPython virtual machine (VM) and may not generalize to other Python implementations such as PyPy or Jython.
 - Not intended as a replacement for production-grade debuggers or performance profilers.
 - Some visualization features depend on external tools such as Graphviz and xdot.
 - Certain advanced Python features (e.g., concurrency, dynamic code execution patterns) may not be fully supported.
