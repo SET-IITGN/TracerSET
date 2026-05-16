@@ -1,6 +1,7 @@
 # TracerSET
 
-**TracerSET — Execution-Centric Program Comprehension Environment for Python**
+**Execution-Centric Program Comprehension Environment for Python**
+
 TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) tool that provides multiple coordinated views of Python program behavior by combining lexical structure, syntactic structure, control-flow representation, bytecode analysis, and runtime execution tracing. It enables step-by-step exploration of program execution while presenting static program representations as whole-program views, allowing users to understand how source code structure relates to execution behavior over time.
 
 ---
