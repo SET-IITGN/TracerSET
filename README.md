@@ -102,7 +102,7 @@ Provides full internal program representation:
 
 ## System Requirements
 
-- Python 3.10 – 3.12
+- Python >=3.10
 - Linux / Windows
 
 ## Dependencies
