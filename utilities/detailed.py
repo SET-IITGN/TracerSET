@@ -4,6 +4,7 @@ import traceback
 import linecache
 import os
 import types
+import dis
 
 COLOR = "\033[93m"
 CURR = "\033[92m"
@@ -14,7 +15,7 @@ def clear_screen():
     if sys.stdin.isatty():
         rows = os.get_terminal_size().lines
         # Natural scroll
-        for _ in range(rows):
+        for _ in range(rows-1):
             print()
         # Reposition cursor
         print("\033[H", end="", flush=True)
@@ -326,6 +327,36 @@ class VariableTracer:
                     f"{func_signature} "
                     f"[{os.path.basename(filename)}:{lineno}]{RESET}"
                 )
+
+        def get_line_instructions(frame, line_no):
+            """
+            Return ALL bytecode instructions associated
+            with the current source line.
+            """
+
+            try:
+
+                instructions = list(
+                dis.get_instructions(frame.f_code)
+                )
+
+                result = []
+
+                current_line = None
+
+                for ins in instructions:
+
+                    # CPython marks beginning of source line
+                    if ins.starts_line is not None:
+                        current_line = ins.starts_line
+
+                    if current_line == line_no:
+                        result.append(ins)
+
+                return result
+
+            except Exception:
+                return []
                 
         def tracer(frame, event, arg):
             nonlocal call_depth
@@ -403,9 +434,9 @@ class VariableTracer:
                 '''
                 args_str = call_signatures.get(id(frame), "")
                 try:
-                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {repr(arg)}{RESET}")
+                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {repr(arg)}{RESET}")
                 except Exception:
-                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RETurned : <unrepr-able>{RESET}")
+                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : <unrepr-able>{RESET}")
                 
                 if frame.f_back:
                     #print_stack(frame.f_back, active_only=True)
@@ -444,6 +475,7 @@ class VariableTracer:
                 indent = "│   " * call_depth
 
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                line_instructions = get_line_instructions(frame,line_no)
                 
                 self.print_code_file(filename, line_no)
                 
@@ -457,9 +489,41 @@ class VariableTracer:
                 print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                 getch()
                 '''
-                
                 print(f"\n{indent}├─ LINE {line_no}")
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+
+                #-----------------[BEGIN] bytecode instruction list for a source line-----------------
+                #              uncomment the following code block only for advanced users
+                '''
+                if line_instructions:
+
+                    print(f"{indent}│  VM INS  :")
+
+                    for ins in line_instructions:
+
+                        argval = ""
+
+                        if ins.argval is not None:
+                            argval = repr(ins.argval)
+                            if ' object ' in argval:
+                                #example: <code object f at 0x7f25ed642a20, ...>
+                                try:
+                                    zbuff=argval.split(' at ')[0]
+                                    argval=zbuff[1:]
+                                    zbuff=argval.split()
+                                    argval=f"<{' '.join(zbuff[:2])}>"
+                                except Exception:
+                                    argval=""
+                                    
+                        print(
+                            f"{indent}│            "
+                            #f"{COLOR}{ins.offset} "
+                            f"{COLOR}{ins.opname} "
+                            f"{argval}{RESET}"
+                        )
+                '''
+                #------------------[END] bytecode instruction list for a source line-----------------
+                        
                 print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
