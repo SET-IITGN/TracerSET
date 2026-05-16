@@ -9,7 +9,7 @@ TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_com
 ## Key Idea
 Program understanding typically relies on separate tools and views:
 - Source-level debugging (runtime execution)
-- Static structure analysis (AST / CST)
+- Static structure analysis (AST, CST)
 - Control-flow reasoning (CFG)
 - Bytecode inspection
 - Execution tracing tools
