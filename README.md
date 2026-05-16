@@ -116,8 +116,8 @@ This final stage provides complete visibility into:
 - Python >=3.10
 - Linux / Windows
 
-## Dependencies
-### Core dependencies
+### Other dependencies
+(non-exhaustive)
 ```
 graphviz
 libcst
