@@ -128,7 +128,7 @@ pytest
 ---
 ## Design Philosophy
 TracerSET is built on the principle of execution-centric program comprehension, where:
-- Static program structure (tokens, CST, AST, CFG) is computed as whole-program representations
+- Static program structure (tokens, CST, AST, CFG, bytecode) is computed as whole-program representations
 - Dynamic runtime behavior (stack, variables, execution trace, bytecode) is observed step-by-step
 
 These two perspectives are presented together to help users connect program structure with program behavior during execution. This enables users to observe not only what a program executes, but how its execution unfolds over time.
