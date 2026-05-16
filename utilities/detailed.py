@@ -198,13 +198,29 @@ class VariableTracer:
     
     def create_tracer(self):
         call_depth = 0
+        call_signatures = {}
         def format_args(frame):
             args = []
-            for name, value in frame.f_locals.items():
+
+            argcount = frame.f_code.co_argcount
+            argnames = frame.f_code.co_varnames[:argcount]
+
+            for name in argnames:
+                if name in frame.f_locals:
+                    value = frame.f_locals[name]
+
                 try:
-                    args.append(f"{name}={repr(value)}")
+                    value_repr = repr(value)
                 except Exception:
-                    args.append(f"{name}=<unrepr-able>")
+                    value_repr = "<unrepr-able>"
+
+                if ' object ' in value_repr:
+                    xbuff = value_repr.split('__main__.')[1]
+                    xbuff = xbuff.split('object')[0]
+                    xbuff = '<' + xbuff + 'object>'
+                    value_repr = xbuff
+
+                args.append(f"{name}={value_repr}")
 
             return ", ".join(args)
         def get_filtered_vars(frame):
@@ -264,23 +280,15 @@ class VariableTracer:
                     )                    
                 )
                     '''
-                    argcount = current.f_code.co_argcount
-                    argnames = current.f_code.co_varnames[:argcount]
-
-                    args = []
-                    for arg in argnames:
-                        if arg in current.f_locals:
-                            try:
-                               value = repr(current.f_locals[arg])
-                            except Exception:
-                               value = "<unreprable>"
-                            args.append(f"{arg}={value}")
-
-                    signature = ", ".join(args)
+                    signature = call_signatures.get(id(current), "")
 
                     stack.append(
                         (
-                            f"{current.f_code.co_name}({signature})",
+                            (
+                                f"{current.f_code.co_name}({signature})"
+                                if signature else
+                                f"{current.f_code.co_name}()"
+                            ),
                             current.f_lineno,
                             filename
                         )
@@ -348,7 +356,13 @@ class VariableTracer:
             if event == 'call':
                 indent = "│   " * call_depth
                 args_str = format_args(frame)
+                call_signatures[id(frame)] = args_str
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                
+                '''
+                print(f"{indent}│  LOCALS   : {locals_dict}")
+                print(f"{indent}│  GLOBALS  : {globals_dict}")
+                '''
                 
                 #print(f"\n{indent}┌─ CALL depth={call_depth}")
                 #print(f"{indent}│  Function : {func_name}({args_str})")
@@ -379,17 +393,19 @@ class VariableTracer:
                 print(f"{indent}│  Function : {func_name}()")
                 '''
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                
+                print(f"{indent}│   <---program state immediately before RETurning--->")
+                print(f"{indent}│   LOCALS   : {locals_dict}")
+                print(f"{indent}│   GLOBALS  : {globals_dict}")
                 '''
-                print(f"{indent}│  LOCALS   : {locals_dict}")
-                print(f"{indent}│  GLOBALS  : {globals_dict}")
                 print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                 getch()
                 '''
-                args_str = format_args(frame)
+                args_str = call_signatures.get(id(frame), "")
                 try:
-                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RET : {repr(arg)}{RESET}")
+                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {repr(arg)}{RESET}")
                 except Exception:
-                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RET : <unrepr-able>{RESET}")
+                    print(f"{CURR}{indent}│   {func_name}({args_str if '<module>' not in func_name else ''}) RETurned : <unrepr-able>{RESET}")
                 
                 if frame.f_back:
                     #print_stack(frame.f_back, active_only=True)
@@ -444,6 +460,7 @@ class VariableTracer:
                 
                 print(f"\n{indent}├─ LINE {line_no}")
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+                print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
                 print_stack(frame, active_only=False,switch=1)
