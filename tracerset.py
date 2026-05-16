@@ -197,10 +197,10 @@ def get_mode():
 
 
 def show_banner(mode):
-    print("=" * 60)
+    print("=" * 63)
     print("TracerSET")
-    print("Python Program Analysis and Execution Tracer")
-    print("=" * 60)
+    print("Execution-Centric Program Comprehension Environment for Python")
+    print("=" * 63)
 
     print(f"\nSelected Mode : {SUCCESS}{mode.upper()}{RESET}")
 
@@ -210,7 +210,7 @@ def show_banner(mode):
         print("Focus         : Runtime behavior + AST + execution trace")
     elif mode == MODE_ADVANCED:
         print("Focus         : Full compiler/runtime internals")
-    print("=" * 60)
+    print("=" * 63)
 
 
 # ============================================================
