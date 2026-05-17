@@ -135,16 +135,35 @@ These two perspectives are presented together to help users connect program stru
 
 ---
 
+## Notes on Python Bytecode and Runtime Behavior
+
+TracerSET intentionally exposes the exact CPython bytecode sequence generated
+for each source line and execution step.
+
+The displayed VM instructions are not simplified, hidden, or normalized.
+This is intentional because:
+
+- A single source statement may compile into multiple bytecode instructions.
+- Function calls may compile into multiple CPython VM instructions, including `PUSH_NULL`, `PRECALL`, `CALL`, `POP_TOP`, and implicit `RETURN_VALUE`.
+- Different Python versions may generate different instruction sequences.
+- The bytecode format and execution semantics are implementation-dependent.
+
+Therefore, execution traces shown by TracerSET should be interpreted as
+the actual runtime/compiler behavior of the underlying Python interpreter
+(primarily CPython), rather than as a language-level abstraction.
+
 ## Limitations
 - Currently supports Python programs only.
-- Execution incurs runtime overhead due to tracing and static analysis.
+- Execution incurs runtime overhead due to tracing and analysis.
 - Best suited for small to medium-sized programs used for education and program comprehension.
-- May produce large outputs for complex or deeply recursive programs.
-- Trace behavior may vary across Python interpreter versions and runtime environments.
-- Bytecode disassembly is based on the CPython virtual machine (VM) and may not generalize to other Python implementations such as PyPy or Jython.
-- Not intended as a replacement for production-grade debuggers or performance profilers.
+- Large or deeply recursive programs may produce verbose traces.
+- Trace behavior, bytecode, and VM instruction sequences may vary across Python versions and runtime environments.
+- Bytecode disassembly and VM-level execution views are CPython-specific and may not generalize to implementations such as PyPy or Jython.
+- A single source line may map to multiple VM instructions, and mappings are interpreter-dependent.
+- Dynamic features such as `exec`, `eval`, metaprogramming, and runtime code generation may reduce trace precision.
+- Advanced concurrency features (threads, multiprocessing, async execution) are only partially supported.
+- Not intended as a replacement for production-grade debuggers or profilers.
 - Some visualization features depend on external tools such as Graphviz and xdot.
-- Certain advanced Python features (e.g., concurrency, dynamic code execution patterns) may not be fully supported.
 ---
 
 ## Responsible Use Notice
