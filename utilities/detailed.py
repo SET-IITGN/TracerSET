@@ -7,9 +7,16 @@ import types
 import dis
 
 COLOR = "\033[93m"
+ERROR = "\033[91m"
+SUCCESS = "\033[92m"
 CURR = "\033[92m"
 RESET = "\033[0m"
-flag=0 
+flag=0
+
+MODE_BEGINNER = "beginner"
+MODE_INTERMEDIATE = "intermediate"
+MODE_ADVANCED = "advanced"
+MODE=''
 
 def clear_screen():
     if sys.stdin.isatty():
@@ -493,35 +500,30 @@ class VariableTracer:
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
 
                 #-----------------[BEGIN] bytecode instruction list for a source line-----------------
-                #              uncomment the following code block only for advanced users
-                '''
-                if line_instructions:
-
-                    print(f"{indent}│  VM INS  :")
-
-                    for ins in line_instructions:
-
-                        argval = ""
-
-                        if ins.argval is not None:
-                            argval = repr(ins.argval)
-                            if ' object ' in argval:
-                                #example: <code object f at 0x7f25ed642a20, ...>
-                                try:
-                                    zbuff=argval.split(' at ')[0]
-                                    argval=zbuff[1:]
-                                    zbuff=argval.split()
-                                    argval=f"<{' '.join(zbuff[:2])}>"
-                                except Exception:
-                                    argval=""
-                                    
-                        print(
-                            f"{indent}│            "
-                            #f"{COLOR}{ins.offset} "
-                            f"{COLOR}{ins.opname} "
-                            f"{argval}{RESET}"
-                        )
-                '''
+                global MODE
+                if MODE == MODE_ADVANCED:                 
+                    if line_instructions:
+                        print(f"{indent}│  VM INS  :")
+                        for ins in line_instructions:
+                            argval = ""
+                            if ins.argval is not None:
+                                argval = repr(ins.argval)
+                                if ' object ' in argval:
+                                    #example: <code object f at 0x7f25ed642a20, ...>
+                                    try:
+                                        zbuff=argval.split(' at ')[0]
+                                        argval=zbuff[1:]
+                                        zbuff=argval.split()
+                                        argval=f"<{' '.join(zbuff[:2])}>"
+                                    except Exception:
+                                        argval=""
+                                        
+                            print(
+                                f"{indent}│            "
+                                #f"{COLOR}{ins.offset} "
+                                f"{COLOR}{ins.opname} "
+                                f"{argval}{RESET}"
+                            )
                 #------------------[END] bytecode instruction list for a source line-----------------
                         
                 print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
@@ -551,16 +553,28 @@ class VariableTracer:
         return result
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python3 P.py <script.py>")
+    if len(sys.argv) != 3:
+        print(f'''{COLOR}Usage:
+       python3 detailed.py beginner <file.py> 
+       python3 detailed.py intermediate <file.py>
+       python3 detailed.py advanced <file.py>{RESET}''')
         print("\nComprehensive Python Variable Tracer:")
         print("• Tracks ALL user-defined local/global variables")
         print("• Handles classes, functions, comprehensions, context managers")
         print("• Shows variable states BEFORE each statement executes")
-        print("• Safe repr() handling, no crashes")
+        print(f"• Safe repr() handling, no crashes")
         sys.exit(1)
+    global MODE
+    MODE=sys.argv[1].lower()
+    script_path = sys.argv[2]
     
-    script_path = sys.argv[1]
+    if MODE not in [MODE_BEGINNER,MODE_INTERMEDIATE,MODE_ADVANCED]:
+        print(f"{ERROR}Invalid mode:{RESET} {MODE}")
+        print(f"\nAvailable modes:{COLOR}")
+        for m in [MODE_BEGINNER,MODE_INTERMEDIATE,MODE_ADVANCED]:
+            print(f"{m}")
+        print(f"{RESET}")
+        sys.exit(1)
     
     # Validate script exists
     if not os.path.exists(script_path):

@@ -159,7 +159,7 @@ def show_step_by_step_trace(filename):
     print("=================================")
     pycmd = get_python_cmd()
     os.system(
-        f"{pycmd} utilities/detailed.py {filename}"
+        f"{pycmd} utilities/detailed.py {get_mode()} {filename}"
     )
 
 def show_ast_dump(parsed_ast):
