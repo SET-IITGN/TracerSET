@@ -12,3 +12,4 @@ alias_test.py
 object_field_test.py
 object_field_test2.py
 file_test.py
+test_func_alias.py

@@ -285,6 +285,54 @@ class VariableTracer:
 
             return globals_dict, locals_dict
 
+        def build_alias_graph(frame):
+            alias = {}
+
+            def add(scope, prefix):
+                for k, v in scope.items():
+                    if k.startswith("__"):
+                        continue
+
+                    # IMPORTANT: skip modules/functions only for clarity (optional)
+                    if isinstance(v, types.ModuleType):
+                        continue
+                    try:
+                        oid = id(v)
+                        alias[(prefix, k)] = oid
+                    except Exception:
+                        continue
+
+            add(frame.f_locals, "L")
+            add(frame.f_globals, "G")
+
+            return alias
+
+        def get_alias_sets(frame):
+            alias_map = build_alias_graph(frame)
+
+            groups = {}
+            for (scope, var), oid in alias_map.items():
+                groups.setdefault(oid, []).append(f"{scope}.{var}")
+
+            # keep ALL sets including singletons
+            alias_sets = list(groups.values())
+
+            return alias_sets
+            
+        def print_alias_graph(alias_sets):
+            if not alias_sets:
+                print('{}')
+                return
+
+            formatted = []
+            for s in alias_sets:
+                if len(s) == 1:
+                    formatted.append("{" + s[0] + "}")
+                else:
+                    formatted.append("{" + ", ".join(sorted(s)) + "}")
+
+            print(" ".join(formatted))
+        
         def get_stack(frame):
 
             stack = []
@@ -415,6 +463,7 @@ class VariableTracer:
                 args_str = format_args(frame)
                 call_signatures[id(frame)] = args_str
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
                 
                 '''
                 print(f"{indent}│  LOCALS   : {locals_dict}")
@@ -450,10 +499,13 @@ class VariableTracer:
                 print(f"{indent}│  Function : {func_name}()")
                 '''
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
                 
                 print(f"{indent}│   <---program state immediately before RETurning--->")
                 print(f"{indent}│   LOCALS   : {locals_dict}")
                 print(f"{indent}│   GLOBALS  : {globals_dict}")
+                print(f"{indent}│   ALIAS    : ",end='')
+                print_alias_graph(alias_sets)
                 '''
                 print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                 getch()
@@ -501,8 +553,8 @@ class VariableTracer:
                 indent = "│   " * call_depth
 
                 globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
                 line_instructions = get_line_instructions(frame,line_no)
-                
                 self.print_code_file(filename, line_no)
                 
                 '''
@@ -548,6 +600,8 @@ class VariableTracer:
                 print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
+                print(f"{indent}│  ALIAS   : ",end='')
+                print_alias_graph(alias_sets)
                 print_stack(frame, active_only=False,switch=1)
                 if sys.stdin.isatty():
                     print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
