@@ -219,14 +219,26 @@ class VariableTracer:
 
                 try:
                     value_repr = repr(value)
+                    if ' object ' in value_repr:
+                        xbuff = value_repr.split('__main__.')[1]
+                        xbuff = xbuff.split('object')[0]
+                        xbuff = '<' + xbuff + f'object>{vars(value)}'
+                        value_repr = xbuff
+                    elif '<class' in value_repr:
+                        def transform(v, k):
+                            if 'function' in v:
+                                return '<function>'
+                            return v
+                        xbuff = value.__name__
+                        temp_dict= {
+                            k: transform(repr(v), k)
+                            for k, v in vars(value).items()
+                                if not k.startswith('__') or k.startswith('__init__')
+                        }
+                        xbuff = f'<class>{temp_dict}'
+                        value_repr = xbuff
                 except Exception:
                     value_repr = "<unrepr-able>"
-
-                if ' object ' in value_repr:
-                    xbuff = value_repr.split('__main__.')[1]
-                    xbuff = xbuff.split('object')[0]
-                    xbuff = '<' + xbuff + 'object>'
-                    value_repr = xbuff
 
                 args.append(f"{name}={value_repr}")
 
@@ -238,18 +250,8 @@ class VariableTracer:
             def transform(v, k):
                 if '<module' in v:
                     return '<module>'
-                if '<function' in v:
+                if '<function' in v and 'class' not in v:
                     return '<function>'
-                if '<class' in v:
-                    return '<class>'
-                if ' object ' in v:
-                    #example: <__main__.Animal object at 0x7f339319a590>
-                    buff=v.split('__main__.')[1]
-                    #example: <__main__.Animal object at 0x7f339319a590>
-                    buff=buff.split('object')[0]
-                    #'Animal '
-                    buff='<'+buff+'object>'
-                    return buff
                 return v
 
             globals_dict = {
@@ -546,6 +548,27 @@ class VariableTracer:
                 #result[k] = repr(v)
                 if isinstance(v, types.FunctionType):
                     result[k] = f"<function {v.__name__}>" #reduce-noise
+                elif ' object ' in repr(v):
+                    #example: <__main__.Animal object at 0x7f339319a590>
+                    buff=repr(v).split('__main__.')[1]
+                    #example: <__main__.Animal object at 0x7f339319a590>
+                    buff=buff.split('object')[0]
+                    #'Animal '
+                    buff='<'+buff+f'object>{vars(v)}'
+                    result[k] = buff
+                elif '<class ' in repr(v):
+                    def transform(vv, kk):
+                        if 'function' in vv:
+                            return '<function>'
+                        return vv
+                    xbuff = v.__name__
+                    temp_dict= {
+                        xk: transform(repr(xv), xk)
+                        for xk, xv in vars(v).items()
+                            if not xk.startswith('__') or xk.startswith('__init__')
+                    }
+                    xbuff = f'<class>{temp_dict}'
+                    result[k] = xbuff
                 else:
                     result[k] = repr(v)
             except Exception:
