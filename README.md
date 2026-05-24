@@ -40,6 +40,8 @@ TracerSET integrates these perspectives in a single environment where:
 - Step-by-step execution tracing of Python programs
 - Runtime stack visualization
 - Local and global variable inspection
+- Variable states shown before each statement executes
+- Scope views reflect reachability from the current execution context, not object storage
 - Source code highlighting during execution
 - Token-level analysis (advanced mode)
 - Concrete Syntax Tree (CST) visualization
