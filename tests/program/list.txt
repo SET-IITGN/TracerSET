@@ -11,3 +11,4 @@ call_ret_test2.py
 alias_test.py
 object_field_test.py
 object_field_test2.py
+file_test.py

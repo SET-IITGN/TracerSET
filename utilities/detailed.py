@@ -5,11 +5,13 @@ import linecache
 import os
 import types
 import dis
+import io
 
 COLOR = "\033[93m"
 ERROR = "\033[91m"
 SUCCESS = "\033[92m"
 CURR = "\033[92m"
+INFO = "\033[96m"
 RESET = "\033[0m"
 flag=0
 
@@ -31,6 +33,21 @@ def getch():
     if sys.stdin.isatty():
         sys.stdin.read(1)
         clear_screen()
+        
+def is_file_like(v):
+    return (
+        isinstance(v, io.IOBase)
+        or (
+            hasattr(v, "read")
+            and hasattr(v, "write")
+        )
+    )
+    
+def safe_call(fn):
+    try:
+        return fn()
+    except Exception:
+        return "<unavailable>"
 
 class VariableTracer:
     def __init__(self, script_path):
@@ -569,6 +586,42 @@ class VariableTracer:
                     }
                     xbuff = f'<class>{temp_dict}'
                     result[k] = xbuff
+                elif is_file_like(v):
+                    try:
+                        result[k] = f"<type='{type(v).__name__}' name='{v.name}' "
+                        result[k] +=f"mode='{v.mode}' "
+                        result[k] +=f"encoding='{getattr(v, 'encoding', None)}' "
+                        result[k] +=f"closed={v.closed} "
+                        
+                        # Current stream cursor position
+                        result[k] +=f"position={safe_call(v.tell)} "
+                        
+                        # Stream capabilities
+                        result[k] +=f"readable={safe_call(v.readable)} "
+                        result[k] +=f"writable={safe_call(v.writable)}"
+                        
+                        # buffering / durability semantics
+                        if not v.closed:
+                            try:
+                                pending = False
+
+                                # TextIOWrapper -> BufferedWriter
+                                if hasattr(v, "buffer"):
+                                    raw_buffer = v.buffer
+
+                                    # Buffered layer may expose pending bytes
+                                    if hasattr(raw_buffer, "raw"):
+                                        pending = True
+
+                                result[k] += f" buffered={pending}"
+
+                            except Exception:
+                                result[k] += " buffered=<unknown>"
+                        
+                        result[k] += '>'
+                        
+                    except Exception:
+                        result[k] = f"<{type(v).__name__}>"
                 else:
                     result[k] = repr(v)
             except Exception:
@@ -646,7 +699,8 @@ def main():
         
         clear_screen()
         print("Starting execution with tracing...")
-        print(f"Variable states shown BEFORE each statement executes")
+        print(f"{INFO}Variable states shown BEFORE each statement executes")
+        print(f"Scope View: LOCALS and GLOBALS are reachability views\nfrom the current execution context (frame), not object storage{RESET}")
         print(f"{'='*80}")
         
         exec(code, exec_globals)
