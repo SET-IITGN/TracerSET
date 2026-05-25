@@ -308,6 +308,7 @@ class VariableTracer:
             return alias
 
         def get_alias_sets(frame):
+            '''
             alias_map = build_alias_graph(frame)
 
             groups = {}
@@ -318,8 +319,62 @@ class VariableTracer:
             alias_sets = list(groups.values())
 
             return alias_sets
+            '''
+            object_groups = {}
+
+            # ---------- LOCALS ----------
+            for name, value in frame.f_locals.items():
+
+                if name.startswith("__"):
+                    continue
+
+                if isinstance(value, types.ModuleType):
+                    continue
+
+                if isinstance(value, types.FunctionType):
+                    continue
+
+                oid = id(value)
+
+                if oid not in object_groups:
+                    object_groups[oid] = set()
+
+                object_groups[oid].add(f"L.{name}")
+
+            # ---------- GLOBALS ----------
+            for name, value in frame.f_globals.items():
+
+                if name.startswith("__"):
+                    continue
+
+                if isinstance(value, types.ModuleType):
+                    continue
+
+                if isinstance(value, types.FunctionType):
+                    continue
+
+                oid = id(value)
+
+                if oid not in object_groups:
+                    object_groups[oid] = set()
+
+                object_groups[oid].add(f"G.{name}")
+
+            # Convert to stable printable form
+            alias_sets = []
+
+            for vars_set in object_groups.values():
+
+                alias_sets.append(
+                    "{" + ", ".join(sorted(vars_set)) + "}"
+                )
+
+            alias_sets.sort()
+
+            return " ".join(alias_sets)    
             
         def print_alias_graph(alias_sets):
+            '''
             if not alias_sets:
                 print('{}')
                 return
@@ -332,6 +387,12 @@ class VariableTracer:
                     formatted.append("{" + ", ".join(sorted(s)) + "}")
 
             print(" ".join(formatted))
+            '''
+            if not alias_sets:
+                print("{}")
+                return
+
+            print(alias_sets)
         
         def get_stack(frame):
 
