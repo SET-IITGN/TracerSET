@@ -494,6 +494,7 @@ class VariableTracer:
                 return []
                 
         def tracer(frame, event, arg):
+            global MODE
             nonlocal call_depth
             filename = os.path.abspath(frame.f_code.co_filename)
             
@@ -553,7 +554,6 @@ class VariableTracer:
             # FUNCTION RETURN
             # ==========================================================
             elif event == 'return':
-
                 indent = "│   " * (call_depth - 1)
                 '''
                 print(f"\n{indent}┌─ RETURN depth={call_depth - 1}")
@@ -565,8 +565,9 @@ class VariableTracer:
                 print(f"{indent}│   <---program state immediately before RETurning--->")
                 print(f"{indent}│   LOCALS   : {locals_dict}")
                 print(f"{indent}│   GLOBALS  : {globals_dict}")
-                print(f"{indent}│   ALIAS    : ",end='')
-                print_alias_graph(alias_sets)
+                if MODE == MODE_ADVANCED:
+                    print(f"{indent}│   ALIAS    : ",end='')
+                    print_alias_graph(alias_sets)
                 '''
                 print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                 getch()
@@ -595,7 +596,6 @@ class VariableTracer:
             # LINE EXECUTION
             # ==========================================================
             elif event == 'line':
- 
                 line_no = frame.f_lineno
                 line_source = self.get_line_source(
                     filename,
@@ -632,7 +632,6 @@ class VariableTracer:
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
 
                 #-----------------[BEGIN] bytecode instruction list for a source line-----------------
-                global MODE
                 if MODE == MODE_ADVANCED:                 
                     if line_instructions:
                         print(f"{indent}│  VM INS  :")
@@ -661,8 +660,9 @@ class VariableTracer:
                 print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
                 print(f"{indent}│  LOCALS  : {locals_dict}")
                 print(f"{indent}│  GLOBALS : {globals_dict}")
-                print(f"{indent}│  ALIAS   : ",end='')
-                print_alias_graph(alias_sets)
+                if MODE == MODE_ADVANCED:   
+                    print(f"{indent}│  ALIAS   : ",end='')
+                    print_alias_graph(alias_sets)
                 print_stack(frame, active_only=False,switch=1)
                 if sys.stdin.isatty():
                     print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
