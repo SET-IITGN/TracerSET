@@ -49,6 +49,7 @@ TracerSET integrates these perspectives in a single environment where:
 - Control Flow Graph (CFG) generation
 - Python bytecode disassembly
 - Execution tracing via Python `trace` module
+- Alias sets (advanced mode)
 - Progressive learning modes:
   - Beginner
   - Intermediate
@@ -107,6 +108,7 @@ Includes:
 - Python bytecode disassembly
 - Program execution trace (Python trace module output)
 - Step-by-step program execution trace (custom detailed tracer)
+- Alias sets (ALIAS)
 
 This final stage provides complete visibility into:
 - lexical structure (tokens)
