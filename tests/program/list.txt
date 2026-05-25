@@ -14,3 +14,6 @@ object_field_test.py
 object_field_test2.py
 file_test.py
 test_func_alias.py
+enum_test.py
+deque_test.py
+test_sys_math.py
