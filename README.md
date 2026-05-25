@@ -181,7 +181,7 @@ the actual runtime/compiler behavior of the underlying Python interpreter
 - Bytecode disassembly and VM-level execution views are CPython-specific and may not generalize to implementations such as PyPy or Jython.
 - A single source line may map to multiple VM instructions, and mappings are interpreter-dependent.
 - Dynamic features such as `exec`, `eval`, metaprogramming, and runtime code generation may reduce trace precision.
-- Advanced concurrency features (threads, multiprocessing, async execution) are only partially supported.
+- Advanced concurrency features (threads, multiprocessing, async execution) are not fully supported; only the portions that execute within the currently traced Python frame/context may be observed.
 - Not intended as a replacement for production-grade debuggers or profilers.
 - Some visualization features depend on external tools such as Graphviz and xdot.
 ---
