@@ -15,5 +15,7 @@ object_field_test2.py
 file_test.py
 test_func_alias.py
 enum_test.py
+enum_test2.py
 deque_test.py
 test_sys_math.py
+test_walrus.py

@@ -69,7 +69,7 @@ class VariableTracer:
         sys.path[:] = self.original_path
         
     def extract_user_variables(self):
-        """Extract ALL user-defined variable names using comprehensive AST analysis."""
+        """Extract ALL user variable names using comprehensive AST analysis."""
         try:
             with open(self.script_path, 'r', encoding='utf-8') as f:
                 source = f.read()
@@ -93,6 +93,48 @@ class VariableTracer:
         
         return self.user_vars
     
+    def is_user_defined_class(self, cls):
+        '''
+        try:
+            return (
+                hasattr(cls, "__module__") and
+                cls.__module__ == "__main__"
+            )
+        except Exception:
+            return False
+        '''    
+        try:
+            return (
+                isinstance(cls, type)
+                and cls.__module__ == "__main__"
+            )
+        except Exception:
+            return False
+
+    def is_user_frame(self, filename):
+        filename = os.path.abspath(filename)
+
+        # tracer itself
+        if os.path.basename(filename) == "detailed.py":
+            return False
+
+        # frozen / importlib
+        if "<frozen importlib" in filename:
+            return False
+
+        # stdlib directory
+        stdlib_dir = os.path.dirname(os.__file__)
+        if filename.startswith(stdlib_dir):
+            return False
+
+        # venv / site-packages
+        site_dirs = [p for p in sys.path if "site-packages" in p or "dist-packages" in p]
+        if any(filename.startswith(p) for p in site_dirs):
+            return False
+
+        # finally restrict to project only
+        return filename.startswith(self.project_root)
+
     def _collect_variables(self, node):
         """Recursively collect all variable names from AST node."""
         
@@ -103,6 +145,10 @@ class VariableTracer:
         elif isinstance(node, ast.AnnAssign) and node.target:
             self._collect_target_names(node.target)
         elif isinstance(node, ast.AugAssign):
+            self._collect_target_names(node.target)
+        
+        # WALRUS OPERATOR (x := expr)
+        elif isinstance(node, ast.NamedExpr):
             self._collect_target_names(node.target)
         
         # Loop variables
@@ -139,11 +185,51 @@ class VariableTracer:
             self._collect_function_params(node)
         
         # Comprehension variables
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            for gen in node.generators:
+                self._collect_target_names(gen.target)
         elif isinstance(node, ast.comprehension):
             self._collect_target_names(node.target)
+        
+        # MATCH / CASE (Python 3.10+ structural pattern matching)    
+        elif isinstance(node, ast.MatchAs):
+            if node.name:
+                self.user_vars.add(node.name)
+        elif isinstance(node, ast.MatchStar):
+            if node.name:
+                self.user_vars.add(node.name)
+        elif isinstance(node, ast.MatchMapping):
+            '''
+            for key, pattern in zip(node.keys, node.patterns):
+                self._collect_variables(pattern)
+            '''
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+        elif isinstance(node, ast.MatchClass):
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+        elif isinstance(node, ast.MatchSequence):
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+                
+        # IMPORTS (these introduce names)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                self.user_vars.add(alias.asname or alias.name.split(".")[0])
+
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                self.user_vars.add(alias.asname or alias.name)
     
     def _collect_target_names(self, node):
         """Extract names from complex targets (tuples, lists, starred)."""
+        '''
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, (ast.Store, ast.Param)):
+                self.user_vars.add(node.id)
+        '''
         if isinstance(node, ast.Name):
             self.user_vars.add(node.id)
         elif isinstance(node, (ast.Tuple, ast.List)):
@@ -151,9 +237,12 @@ class VariableTracer:
                 self._collect_target_names(elt)
         elif isinstance(node, ast.Starred):
             self._collect_target_names(node.value)
+        elif isinstance(node, ast.Attribute):
+            pass
     
     def _collect_function_params(self, node):
         """Extract all function/lambda parameter names."""
+        '''
         args = node.args if hasattr(node, 'args') else node
         for arg in args.args:
             self.user_vars.add(arg.arg)
@@ -163,12 +252,26 @@ class VariableTracer:
             self.user_vars.add(args.vararg.arg)
         if args.kwarg:
             self.user_vars.add(args.kwarg.arg)
+        '''
+        args = node.args
+        for arg in getattr(args, "posonlyargs", []):
+            self.user_vars.add(arg.arg)
+        for arg in args.args:
+            self.user_vars.add(arg.arg)
+        for arg in args.kwonlyargs:
+            self.user_vars.add(arg.arg)
+        if args.vararg:
+            self.user_vars.add(args.vararg.arg)
+        if args.kwarg:
+            self.user_vars.add(args.kwarg.arg)
     
+    '''
     def _get_exclude_set(self):
         """Get comprehensive set of names to exclude."""
         builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
         exclude = builtins.copy()
         exclude.update([
+            
             # Python internals
             '__name__', '__doc__', '__package__', '__loader__', '__spec__',
             '__annotations__', '__file__', '__cached__', '__builtins__',
@@ -187,6 +290,17 @@ class VariableTracer:
             'datetime', 'decimal', 'fractions', 'statistics'
         ])
         
+        return exclude
+    '''
+    def _get_exclude_set(self):
+        builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
+        exclude = set(builtins)
+        exclude.update({
+            "True", "False", "None", "NotImplemented", "Ellipsis",
+            "__debug__",
+            #"__annotations__","args", "kwargs", "cls", "super"
+        })
+
         return exclude
     
     def get_line_source(self, filename, line_no):
@@ -220,7 +334,7 @@ class VariableTracer:
                 f"{RESET}"
             )
         print("\n" + "─" * 60)
-    
+        
     def create_tracer(self):
         call_depth = 0
         call_signatures = {}
@@ -233,55 +347,75 @@ class VariableTracer:
             for name in argnames:
                 if name in frame.f_locals:
                     value = frame.f_locals[name]
+                    value_repr = "<unavailable>"
+                    try:
+                        value_repr = repr(value)
+                        if ' object ' in value_repr:
+                            xbuff = value_repr.split('__main__.')[1]
+                            xbuff = xbuff.split('object')[0]
+                            xbuff = '<' + xbuff + f'object>{vars(value)}'
+                            value_repr = xbuff
+                        elif '<class' in value_repr:
+                            def transform(v, k):
+                                if 'function' in v:
+                                    return '<function>'
+                                return v
+                            xbuff = value.__name__
+                            temp_dict= {
+                                k: transform(v, k)
+                                for k, v in vars(value).items()
+                                    #if not k.startswith('_') or k.startswith('__init__')
+                                    if k in self.user_vars
+                            }
+                            xbuff = f'<class>{temp_dict}'
+                            value_repr = xbuff
+                    except Exception:
+                        value_repr = "<unrepr-able>"
 
-                try:
-                    value_repr = repr(value)
-                    if ' object ' in value_repr:
-                        xbuff = value_repr.split('__main__.')[1]
-                        xbuff = xbuff.split('object')[0]
-                        xbuff = '<' + xbuff + f'object>{vars(value)}'
-                        value_repr = xbuff
-                    elif '<class' in value_repr:
-                        def transform(v, k):
-                            if 'function' in v:
-                                return '<function>'
-                            return v
-                        xbuff = value.__name__
-                        temp_dict= {
-                            k: transform(repr(v), k)
-                            for k, v in vars(value).items()
-                                if not k.startswith('__') or k.startswith('__init__')
-                        }
-                        xbuff = f'<class>{temp_dict}'
-                        value_repr = xbuff
-                except Exception:
-                    value_repr = "<unrepr-able>"
-
-                args.append(f"{name}={value_repr}")
+                    args.append(f"{name}={value_repr}")
 
             return ", ".join(args)
+        
         def get_filtered_vars(frame):
             globals_raw = self._safe_repr_dict(frame.f_globals)
             locals_raw = self._safe_repr_dict(frame.f_locals)
 
             def transform(v, k):
-                if '<module' in v:
-                    return '<module>'
-                if '<function' in v and 'class' not in v:
-                    return '<function>'
+                if isinstance(v,str):
+                    if '<module' in v:
+                        return '<module>'
+                    if '<function' in v and 'class' not in v:
+                        return '<function>'
+                elif not isinstance(v,str):
+                    if '<module' in repr(v):
+                        return '<module>'
+                    if '<function' in repr(v) and 'class' not in repr(v):
+                        return '<function>'
                 return v
 
             globals_dict = {
                 k: transform(v, k)
                 for k, v in globals_raw.items()
-                if not k.startswith('__')
+                if not k.startswith('_')
             }
+            
+            globals_dict.update({
+                k: transform(v, k)
+                for k, v in globals_raw.items()
+                if k in self.user_vars
+            })
 
             locals_dict = {
                 k: transform(v, k)
                 for k, v in locals_raw.items()
-                if not k.startswith('__')
+                if not k.startswith('_')
             }
+            
+            locals_dict.update({
+                k: transform(v, k)
+                for k, v in locals_raw.items()
+                if k in self.user_vars
+            })
 
             return globals_dict, locals_dict
 
@@ -290,7 +424,8 @@ class VariableTracer:
 
             def add(scope, prefix):
                 for k, v in scope.items():
-                    if k.startswith("__"):
+                    #if k.startswith("__"):
+                    if k not in self.user_vars:
                         continue
 
                     # IMPORTANT: skip modules/functions only for clarity (optional)
@@ -324,53 +459,38 @@ class VariableTracer:
 
             # ---------- LOCALS ----------
             for name, value in frame.f_locals.items():
-
-                if name.startswith("__"):
+                #if name.startswith("__"):
+                if name not in self.user_vars:
                     continue
-
                 if isinstance(value, types.ModuleType):
                     continue
-
                 if isinstance(value, types.FunctionType):
                     continue
-
                 oid = id(value)
-
                 if oid not in object_groups:
                     object_groups[oid] = set()
-
                 object_groups[oid].add(f"L.{name}")
 
             # ---------- GLOBALS ----------
             for name, value in frame.f_globals.items():
-
-                if name.startswith("__"):
+                #if name.startswith("__"):
+                if name not in self.user_vars:
                     continue
-
                 if isinstance(value, types.ModuleType):
                     continue
-
                 if isinstance(value, types.FunctionType):
                     continue
-
                 oid = id(value)
-
                 if oid not in object_groups:
                     object_groups[oid] = set()
-
                 object_groups[oid].add(f"G.{name}")
-
             # Convert to stable printable form
             alias_sets = []
-
             for vars_set in object_groups.values():
-
                 alias_sets.append(
                     "{" + ", ".join(sorted(vars_set)) + "}"
                 )
-
             alias_sets.sort()
-
             return " ".join(alias_sets)    
             
         def print_alias_graph(alias_sets):
@@ -395,19 +515,18 @@ class VariableTracer:
             print(alias_sets)
         
         def get_stack(frame):
-
             stack = []
             current = frame
+            '''
             while current:
-                filename = os.path.abspath(
-                current.f_code.co_filename
-                )
+                filename = os.path.abspath(current.f_code.co_filename)
 
                 # Ignore tracer implementation frames
                 #if os.path.basename(filename) != "detailed.py":
                 basename = os.path.basename(filename)
-                if (basename != "detailed.py" and "<frozen importlib" not in filename):
-                    '''
+                #if (basename != "detailed.py" and "<frozen importlib" not in filename):
+                if self.is_user_frame(current.f_code.co_filename):
+                    
                     stack.append(
                     (
                         current.f_code.co_name,
@@ -415,7 +534,7 @@ class VariableTracer:
                         filename
                     )                    
                 )
-                    '''
+                    
                     signature = call_signatures.get(id(current), "")
 
                     stack.append(
@@ -430,6 +549,24 @@ class VariableTracer:
                         )
                     ) 
                 
+                current = current.f_back
+            '''
+            while current:
+                filename = current.f_code.co_filename
+                if self.is_user_frame(filename):
+                    signature = call_signatures.get(id(current), "")
+                    stack.append(
+                        (
+                            (
+                                f"{current.f_code.co_name}({signature})"
+                                if signature
+                                else f"{current.f_code.co_name}()"
+                            ),
+                            current.f_lineno,
+                            filename
+                        )
+                    )
+
                 current = current.f_back
             stack.reverse()
             return stack  
@@ -496,8 +633,15 @@ class VariableTracer:
         def tracer(frame, event, arg):
             global MODE
             nonlocal call_depth
-            filename = os.path.abspath(frame.f_code.co_filename)
+            filename = frame.f_code.co_filename
             
+            # (early filter)
+            if not self.is_user_frame(filename):
+                return tracer
+            
+            filename = os.path.abspath(filename)
+            
+            '''
             # Ignore the tracer implementation itself
             if os.path.basename(filename) == "detailed.py":
                 return tracer
@@ -513,7 +657,10 @@ class VariableTracer:
             )
 
             if filename.startswith(exclude_dirs):
-                return tracer    
+                return tracer   
+            '''
+            if not self.is_user_frame(filename):
+                return tracer 
 
             func_name = frame.f_code.co_name
 
@@ -688,16 +835,24 @@ class VariableTracer:
                     #'Animal '
                     buff='<'+buff+f'object>{vars(v)}'
                     result[k] = buff
-                elif '<class ' in repr(v):
+                #elif '<class ' in repr(v):
+                elif isinstance(v, type) and self.is_user_defined_class(v):
                     def transform(vv, kk):
-                        if 'function' in vv:
-                            return '<function>'
+                        if isinstance(vv,str):
+                            if 'function' in vv:
+                                return '<function>'
+                        elif not isinstance(vv,str):
+                            if '<module' in repr(vv):
+                                return '<module>'
+                            if '<function' in repr(vv) and 'class' not in repr(vv):
+                                return '<function>'
                         return vv
                     xbuff = v.__name__
                     temp_dict= {
-                        xk: transform(repr(xv), xk)
+                        xk: transform(xv, xk)
                         for xk, xv in vars(v).items()
-                            if not xk.startswith('__') or xk.startswith('__init__')
+                            #if not xk.startswith('_') or xk.startswith('__init__')
+                            if xk in self.user_vars
                     }
                     xbuff = f'<class>{temp_dict}'
                     result[k] = xbuff
@@ -737,6 +892,12 @@ class VariableTracer:
                         
                     except Exception:
                         result[k] = f"<{type(v).__name__}>"
+                elif isinstance(v, str):
+                    result[k] = v
+                elif isinstance(v, (int, float, bool, type(None))):
+                    result[k] = v
+                elif hasattr(v, "__repr__") and not isinstance(v, (str, int, float, bool, type(None))):
+                    result[k] = v
                 else:
                     result[k] = repr(v)
             except Exception:
@@ -750,7 +911,7 @@ def main():
        python3 detailed.py intermediate <file.py>
        python3 detailed.py advanced <file.py>{RESET}''')
         print("\nComprehensive Python Variable Tracer:")
-        print("• Tracks ALL user-defined local/global variables")
+        print("• Tracks ALL user local/global variables")
         print("• Handles classes, functions, comprehensions, context managers")
         print("• Shows variable states BEFORE each statement executes")
         print(f"• Safe repr() handling, no crashes")
@@ -784,11 +945,11 @@ def main():
     user_vars = tracer.extract_user_variables()
     
     if not user_vars:
-        print("No user-defined variables found (only built-ins used)")
+        print("No user variables found (only built-ins used)")
         print("   This is normal for scripts that only use built-in functions.")
         return
     
-    print(f"Found {len(user_vars)} user-defined variable(s):")
+    print(f"Found {len(user_vars)} user variable(s):")
     print(f"   {', '.join(sorted(user_vars))}")
     print(f"{'='*80}")
     
