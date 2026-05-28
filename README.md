@@ -2,7 +2,7 @@
 
 **Execution-Centric Program Comprehension Environment for Python**
 
-TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) tool that provides multiple coordinated views of Python program behavior by combining lexical structure, syntactic structure, control-flow representation, bytecode analysis, and runtime execution tracing. It enables step-by-step exploration of program execution while presenting static program representations as whole-program views, allowing users to understand how source code structure relates to execution behavior over time.
+TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) tool that provides multiple coordinated views of Python program behavior by combining lexical structure, syntactic structure, cognitive complexity, control-flow representation, bytecode analysis, and runtime execution tracing. It enables step-by-step exploration of program execution while presenting static program representations as whole-program views, allowing users to understand how source code structure relates to execution behavior over time.
 
 ## Table of Contents
 - [Key Idea](#key-idea)
@@ -27,6 +27,7 @@ Program understanding typically relies on separate tools and views:
 - Source-level debugging (runtime execution)
 - Static structure analysis (AST, CST)
 - Control-flow reasoning (CFG)
+- Cognitive complexity analysis
 - Bytecode inspection
 - Execution tracing tools
 
@@ -74,6 +75,7 @@ Includes:
 - Source code display
 - Control Flow Graph (CFG)
 - Step-by-step program execution trace (custom detailed tracer)
+- Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 At this stage, the learner primarily observes execution flow and control structure. No internal program representations are shown.
 
@@ -88,6 +90,7 @@ Includes:
 - Abstract Syntax Tree (AST) visualization
 - Program execution trace (Python trace module output)
 - Step-by-step program execution trace (custom detailed tracer)
+- Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This stage helps the learner connect:
 - how the program is structured (AST)
@@ -151,7 +154,7 @@ complexipy
 ---
 ## Design Philosophy
 TracerSET is built on the principle of execution-centric program comprehension, where:
-- Static program structure (tokens, CST, AST, CFG, bytecode) is computed as whole-program representations
+- Static program structure (tokens, CST, AST, CFG, cognitive complexity, bytecode) is computed as whole-program representations
 - Dynamic runtime behavior (stack, variables, execution trace, bytecode) is observed step-by-step
 
 These two perspectives are presented together to help users connect program structure with program behavior during execution. This enables users to observe not only what a program executes, but how its execution unfolds over time.
