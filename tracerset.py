@@ -87,10 +87,62 @@ def show_tokens(filename):
         for token in tokens:
             print(token)
 
-def show_control_flow_graph(filename):
-    pause("[Control Flow Graph (CFG)]")
-    print("==========================")
+def resolve_import_file(module_name, current_file):
+    base_dir = os.path.dirname(os.path.abspath(current_file))
+
+    candidate = os.path.join(
+        base_dir,
+        module_name.replace(".", os.sep) + ".py"
+    )
+
+    if os.path.exists(candidate):
+        return os.path.abspath(candidate)
+    return None
+
+def collect_all_python_files(entry_file):
+    base_file = os.path.abspath(entry_file)
+
+    pending = [base_file]
+    visited = set()
+
+    while pending:
+        current = pending.pop(0)
+        if current in visited:
+            continue
+
+        visited.add(current)
+
+        with open(current, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        tree = ast.parse(source)
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported = resolve_import_file(alias.name, current)
+                    if imported and imported not in visited:
+                        pending.append(imported)
+
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported = resolve_import_file(node.module, current)
+                    if imported and imported not in visited:
+                        pending.append(imported)
+
+    return list(visited)
+
+def show_cognitive_complexity(filename):
+    pause("[Cognitive Complexity]")
+    print("======================")
+    files = collect_all_python_files(filename)
+    print("Analyzing files:")
+    for f in files:
+        print(" -", f)
+    cmd = "complexipy -cs -C no --suggest-refactors " + " ".join(files)
+    os.system(cmd)
     
+def show_control_flow_graph(filename):
     try:
         import python_ta.cfg as cfg
         cfg.generate_cfg(filename)
@@ -121,6 +173,15 @@ def show_control_flow_graph(filename):
     else:
         print("Platform not supported yet!")
         exit(-1)
+
+def cfg_iterator(filename):
+    pause("[Control Flow Graph (CFG)]")
+    print("==========================")
+    files = collect_all_python_files(filename)
+    print("Analyzing files:")
+    for f in files:
+        print(" -", f)
+        show_control_flow_graph(f)
     
 def show_concrete_syntax_tree(filename):
     pause("[Concrete Syntax Tree (CST)]")
@@ -239,10 +300,15 @@ def main():
     # --------------------------------------------------------
     show_source_code(buff)
     
+    # -----------------------------
+    # Cognitive Complexity Layer
+    # -----------------------------
+    show_cognitive_complexity(filename)
+    
     # --------------------------------------------------------
     # Always show control flow graph
     # --------------------------------------------------------
-    show_control_flow_graph(filename)
+    cfg_iterator(filename)
 
     # --------------------------------------------------------
     # ADVANCED MODE

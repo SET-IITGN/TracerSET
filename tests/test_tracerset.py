@@ -21,13 +21,18 @@ def load_program():
 
             if not line or line.startswith("#"):
                 continue
-            program.append(TESTCASE_DIR / line)
+
+            parts = [p.strip() for p in line.split(",")]
+
+            file = TESTCASE_DIR / parts[0]
+            expected = parts[1] if len(parts) > 1 else "ok"
+
+            program.append((file, expected))
 
     return program
 
-
-@pytest.mark.parametrize("program", load_program())
-def test_tracer_runs(program):
+@pytest.mark.parametrize("program, expected", load_program())
+def test_tracer_runs(program, expected):
 
     for i in MODES:
         if i is not None:
@@ -50,6 +55,9 @@ def test_tracer_runs(program):
         else:    
             print(result.stdout)
 
-        assert result.returncode == 0
-        assert "Traceback" not in result.stdout
-        assert result.stderr == ""
+        if expected == "ok":
+            assert result.returncode == 0
+            assert "Traceback" not in result.stderr
+            assert result.stderr == ""
+        else:
+            assert "ZeroDivisionError" in result.stderr or "Traceback" in result.stderr

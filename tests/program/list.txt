@@ -20,5 +20,5 @@ deque_test.py
 test_sys_math.py
 test_walrus.py
 test_exception1.py
-test_exception2.py
+test_exception2.py, error
 
