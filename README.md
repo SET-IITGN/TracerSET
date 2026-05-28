@@ -50,6 +50,7 @@ TracerSET integrates these perspectives in a single environment where:
 - Python bytecode disassembly
 - Execution tracing via Python `trace` module
 - Alias sets (advanced mode)
+- Cognitive complexity score
 - Progressive learning modes:
   - Beginner
   - Intermediate
@@ -109,6 +110,7 @@ Includes:
 - Program execution trace (Python trace module output)
 - Step-by-step program execution trace (custom detailed tracer)
 - Alias sets (ALIAS)
+- Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This final stage provides complete visibility into:
 - lexical structure (tokens)
@@ -144,6 +146,7 @@ libcst
 python_ta
 xdot
 pytest
+complexipy
 ```
 ---
 ## Design Philosophy
@@ -184,6 +187,7 @@ the actual runtime/compiler behavior of the underlying Python interpreter
 - Advanced concurrency features (threads, multiprocessing, async execution) are not fully supported; tracing is limited to the currently executing Python thread and frame context, without coverage of inter-process execution or event-loop-level scheduling.
 - Not intended as a replacement for production-grade debuggers or profilers.
 - Some visualization features depend on external tools such as Graphviz and xdot.
+- Cognitive complexity analysis relies on external tooling and may vary across tool versions and environments.
 ---
 
 ## Responsible Use Notice
