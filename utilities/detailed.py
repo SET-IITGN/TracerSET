@@ -663,7 +663,7 @@ class VariableTracer:
                 return tracer 
 
             func_name = frame.f_code.co_name
-
+            
             # ==========================================================
             # FUNCTION CALL
             # ==========================================================
@@ -731,6 +731,10 @@ class VariableTracer:
                 '''
                 print(f"{indent}└────────────────────────────────")
                 '''
+                # stop tracing once user stack becomes empty
+                if call_depth == 1 and func_name == "<module>":
+                    sys.settrace(None)
+                
                 call_depth -= 1
                 
                 if sys.stdin.isatty():
@@ -738,7 +742,25 @@ class VariableTracer:
                     getch()
                 
                 return tracer
+            
+            # ==========================================================
+            # EXCEPTION
+            # ==========================================================
+            elif event == 'exception':
+                indent = "│   " * call_depth
 
+                exc_type, exc_value, exc_tb = arg
+
+                print(f"{indent}│   {ERROR}EXCEPTION RAISED!{RESET}")
+                print(f"{indent}│   Type  : {ERROR}{exc_type.__name__}{RESET}")
+                print(f"{indent}│   Value : {ERROR}{exc_value}{RESET}")
+
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
+
+                return tracer
+               
             # ==========================================================
             # LINE EXECUTION
             # ==========================================================
