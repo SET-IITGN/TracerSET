@@ -50,7 +50,7 @@ Program understanding typically relies on separate tools and views:
 TracerSET presents these perspectives in a single environment where:
 - runtime execution is step-by-step,
 - static representations are computed as a single pass over the program,
-- and these views are presented together to support program comprehension.
+- and static and dynamic views are presented sequentially, with execution occurring after structural analysis.
 ---
 
 ## Features
@@ -58,7 +58,7 @@ TracerSET presents these perspectives in a single environment where:
 - Runtime stack visualization
 - Local and global variable inspection
 - Variable states shown before each statement executes
-- Scope views reflect reachability from the current execution context, not object storage
+- Scope and alias views reflect runtime state at each execution step, based on frame reachability rather than object storage structure
 - Source code highlighting during execution
 - Token-level analysis (advanced mode)
 - Concrete Syntax Tree (CST) visualization
@@ -158,7 +158,7 @@ TracerSET is built on the principle of execution-centric program comprehension, 
 - Static program structure (tokens, CST, AST, CFG, cognitive complexity, bytecode) is computed as whole-program representations
 - Dynamic runtime behavior (stack, variables, execution trace, bytecode) is observed step-by-step
 
-These two perspectives are presented together to help users connect program structure with program behavior during execution. This enables users to observe not only what a program executes, but how its execution unfolds over time.
+These two perspectives are presented in sequence, enabling users to first understand program structure and then observe its runtime behavior during execution. This enables users to observe not only what a program executes, but how its execution unfolds over time.
 
 ---
 
