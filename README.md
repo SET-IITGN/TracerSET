@@ -4,6 +4,22 @@
 
 TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) tool that provides multiple coordinated views of Python program behavior by combining lexical structure, syntactic structure, cognitive complexity, control-flow representation, bytecode analysis, and runtime execution tracing. It enables step-by-step exploration of program execution while presenting static program representations as whole-program views, allowing users to understand how source code structure relates to execution behavior over time.
 
+---
+## System Requirements
+- Python >=3.10
+- Linux / Windows
+
+### Other dependencies
+(non-exhaustive)
+```
+graphviz
+libcst
+python_ta
+xdot
+pytest
+complexipy
+```
+---
 ## Table of Contents
 - [Key Idea](#key-idea)
 - [Features](#features)
@@ -136,21 +152,6 @@ This final stage provides complete visibility into:
 - [Programs using imports](https://drive.google.com/file/d/1UqJ2msjRhtzBqg6Dex_61MBzc8nuI8yQ/view?usp=sharing)
 - More demonstrations coming soon
 
----
-## System Requirements
-- Python >=3.10
-- Linux / Windows
-
-### Other dependencies
-(non-exhaustive)
-```
-graphviz
-libcst
-python_ta
-xdot
-pytest
-complexipy
-```
 ---
 ## Design Philosophy
 TracerSET is built on the principle of execution-centric program comprehension, where:
