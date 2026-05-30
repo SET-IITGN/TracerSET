@@ -6,6 +6,9 @@ import os
 import types
 import dis
 import io
+import tokenize
+from collections import defaultdict
+import ast
 
 COLOR = "\033[93m"
 ERROR = "\033[91m"
@@ -630,6 +633,35 @@ class VariableTracer:
             except Exception:
                 return []
                 
+        
+        def get_current_tokens(fname):
+            token_line_map = defaultdict(list)
+        
+            with open(fname, "r", encoding="utf-8") as f:
+                xsource = f.read()
+            
+            for xtok in tokenize.generate_tokens(io.StringIO(xsource).readline):
+                token_line_map[xtok.start[0]].append(
+                    f"{tokenize.tok_name[xtok.type]}: {repr(xtok.string)}"
+                )
+            
+            return token_line_map
+        
+        def get_current_ast(fname):
+            ast_line_map = defaultdict(list)
+        
+            with open(fname, "r", encoding="utf-8") as f:
+                xsource = f.read()
+            
+            xtree = ast.parse(xsource)
+
+            for xnode in ast.walk(xtree):
+                if hasattr(xnode, "lineno"):
+                    line = xnode.lineno
+                    ast_line_map[line].append(xnode)
+                
+            return ast_line_map
+        
         def tracer(frame, event, arg):
             global MODE
             nonlocal call_depth
@@ -661,8 +693,11 @@ class VariableTracer:
             '''
             if not self.is_user_frame(filename):
                 return tracer 
-
+                
             func_name = frame.f_code.co_name
+            
+            token_line_map = get_current_tokens(filename)
+            ast_line_map = get_current_ast(filename)
             
             # ==========================================================
             # FUNCTION CALL
@@ -801,7 +836,87 @@ class VariableTracer:
                 print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
 
                 #-----------------[BEGIN] bytecode instruction list for a source line-----------------
-                if MODE == MODE_ADVANCED:                 
+                if MODE == MODE_ADVANCED:
+                    
+                    line_ast_nodes = ast_line_map.get(line_no, [])
+                    if line_ast_nodes:
+                        print(f"{indent}│  AST     :")
+
+                        root = line_ast_nodes[0]
+
+                        # -------- deterministic DFS (NO ast.walk) --------
+                        def iter_children(node):
+                            # deterministic: iter_fields preserves definition order
+                            for _, value in ast.iter_fields(node):
+                                if isinstance(value, ast.AST):
+                                    yield value
+                                elif isinstance(value, list):
+                                    for item in value:
+                                        if isinstance(item, ast.AST):
+                                            yield item
+
+                        # -------- collect nodes matching line --------
+                        filtered = []
+
+                        def dfs(node):
+                            if hasattr(node, "lineno") and node.lineno == line_no:
+                                filtered.append(node)
+
+                            for child in iter_children(node):
+                                dfs(child)
+
+                        dfs(root)
+
+                        # -------- deterministic output order --------
+                        seen = set()
+
+                        def print_tree(node, prefix="", is_last=True, depth=0):
+                            if id(node) in seen:
+                                return
+                            seen.add(id(node))
+
+                            if not hasattr(node, "lineno") or node.lineno != line_no:
+                                return
+
+                            # connector
+                            connector = f"{INFO}└──{RESET} " if is_last else f"{INFO}├──{RESET} "
+
+                            # node line
+                            print(
+                                f"{indent}│            "
+                                f"{prefix}{connector}{COLOR}{type(node).__name__}{RESET}"
+                            )
+
+                            # prepare children (deterministic order)
+                            children = [
+                                c for c in iter_children(node)
+                                if hasattr(c, "lineno") and c.lineno == line_no
+                            ]
+
+                            # print children
+                            for i, child in enumerate(children):
+                                last = (i == len(children) - 1)
+
+                                extension = "    " if is_last else f"{INFO}│{RESET}   "
+
+                                print_tree(
+                                    child,
+                                    prefix + extension,
+                                    last,
+                                    depth + 1
+                                )
+
+                        print_tree(root)
+                        
+                    line_tokens = token_line_map.get(line_no, [])
+                    if line_tokens:
+                        print(f"{indent}│  TOKENS  :")
+                        for tok in line_tokens:
+                            print(
+                                f"{indent}│            "
+                                f"{COLOR}{tok}{RESET}"
+                            )   
+                                         
                     if line_instructions:
                         print(f"{indent}│  VM INS  :")
                         for ins in line_instructions:
