@@ -189,6 +189,7 @@ the actual runtime/compiler behavior of the underlying Python interpreter
 - Trace behavior, bytecode, and VM instruction sequences may vary across Python versions and runtime environments.
 - Bytecode disassembly and VM-level execution views are CPython-specific and may not generalize to implementations such as PyPy or Jython.
 - A single source line may map to multiple VM instructions, and mappings are interpreter-dependent.
+- Execution-aligned views are driven by Python tracing events and source-line mappings. Multi-line expressions, comprehensions, generator expressions, lambdas, and other compiler-generated constructs may produce execution events that do not correspond to complete source-level statements, reflecting the behavior of the underlying Python interpreter.
 - Dynamic features such as `exec`, `eval`, metaprogramming, and runtime code generation may reduce trace precision.
 - Advanced concurrency features (threads, multiprocessing, async execution) are not fully supported; tracing is limited to the currently executing Python thread and frame context, without coverage of inter-process execution or event-loop-level scheduling.
 - Not intended as a replacement for production-grade debuggers or profilers.
