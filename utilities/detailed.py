@@ -70,7 +70,7 @@ class VariableTracer:
     def cleanup(self):
         """Restore original sys.path."""
         sys.path[:] = self.original_path
-        
+    
     def extract_user_variables(self):
         """Extract ALL user variable names using comprehensive AST analysis."""
         try:
@@ -378,6 +378,219 @@ class VariableTracer:
                     args.append(f"{name}={value_repr}")
 
             return ", ".join(args)
+        
+        
+        def node_label(node):
+
+            binop_map = {
+                ast.Add: "+",
+                ast.Sub: "-",
+                ast.Mult: "*",
+                ast.Div: "/",
+                ast.FloorDiv: "//",
+                ast.Mod: "%",
+                ast.Pow: "**",
+                ast.MatMult: "@",
+                ast.LShift: "<<",
+                ast.RShift: ">>",
+                ast.BitAnd: "&",
+                ast.BitOr: "|",
+                ast.BitXor: "^",
+            }
+
+            cmp_map = {
+                ast.Eq: "==",
+                ast.NotEq: "!=",
+                ast.Lt: "<",
+                ast.LtE: "<=",
+                ast.Gt: ">",
+                ast.GtE: ">=",
+                ast.Is: "is",
+                ast.IsNot: "is not",
+                ast.In: "in",
+                ast.NotIn: "not in",
+            }
+
+            unary_map = {
+                ast.UAdd: "+",
+                ast.USub: "-",
+                ast.Not: "not",
+                ast.Invert: "~",
+            }
+
+            bool_map = {
+                ast.And: "and",
+                ast.Or: "or",
+            }
+
+            # ---------- identifiers ----------
+
+            if isinstance(node, ast.Name):
+                return f"Name: {node.id}"
+
+            if isinstance(node, ast.arg):
+                return f"arg: {node.arg}"
+
+            if isinstance(node, ast.Attribute):
+                return f"Attribute: {node.attr}"
+
+            if isinstance(node, ast.keyword):
+                if node.arg is None:
+                    return "keyword: **kwargs"
+                return f"keyword: {node.arg}"
+
+            if isinstance(node, ast.alias):
+                if node.asname:
+                    return f"alias: {node.name} as {node.asname}"
+                return f"alias: {node.name}"
+
+            # ---------- literals ----------
+
+            if isinstance(node, ast.Constant):
+                return f"Constant: {repr(node.value)}"
+
+            # ---------- definitions ----------
+
+            if isinstance(node, ast.FunctionDef):
+                return f"FunctionDef: {node.name}"
+
+            if isinstance(node, ast.AsyncFunctionDef):
+                return f"AsyncFunctionDef: {node.name}"
+
+            if isinstance(node, ast.ClassDef):
+                return f"ClassDef: {node.name}"
+
+            # ---------- operators ----------
+
+            if isinstance(node, ast.BinOp):
+                op = binop_map.get(type(node.op), type(node.op).__name__)
+                return f"BinOp ({op})"
+
+            if isinstance(node, ast.UnaryOp):
+                op = unary_map.get(type(node.op), type(node.op).__name__)
+                return f"UnaryOp ({op})"
+
+            if isinstance(node, ast.BoolOp):
+                op = bool_map.get(type(node.op), type(node.op).__name__)
+                return f"BoolOp ({op})"
+
+            if isinstance(node, ast.Compare):
+                ops = [
+                    cmp_map.get(type(op), type(op).__name__)
+                    for op in node.ops
+                ]
+                return f"Compare ({' '.join(ops)})"
+
+            # ---------- control flow ----------
+
+            if isinstance(node, ast.If):
+                return "If"
+
+            if isinstance(node, ast.For):
+                return "For"
+
+            if isinstance(node, ast.AsyncFor):
+                return "AsyncFor"
+
+            if isinstance(node, ast.While):
+                return "While"
+
+            if isinstance(node, ast.Break):
+                return "Break"
+
+            if isinstance(node, ast.Continue):
+                return "Continue"
+
+            if isinstance(node, ast.Pass):
+                return "Pass"
+
+            if isinstance(node, ast.Return):
+                return "Return"
+
+            if isinstance(node, ast.Yield):
+                return "Yield"
+
+            if isinstance(node, ast.YieldFrom):
+                return "YieldFrom"
+
+            # ---------- imports ----------
+
+            if isinstance(node, ast.Import):
+                return "Import"
+
+            if isinstance(node, ast.ImportFrom):
+                return f"ImportFrom: {node.module}"
+
+            # ---------- collections ----------
+
+            if isinstance(node, ast.List):
+                return "List"
+
+            if isinstance(node, ast.Tuple):
+                return "Tuple"
+
+            if isinstance(node, ast.Set):
+                return "Set"
+
+            if isinstance(node, ast.Dict):
+                return "Dict"
+
+            # ---------- comprehensions ----------
+
+            if isinstance(node, ast.ListComp):
+                return "ListComp"
+
+            if isinstance(node, ast.SetComp):
+                return "SetComp"
+
+            if isinstance(node, ast.DictComp):
+                return "DictComp"
+
+            if isinstance(node, ast.GeneratorExp):
+                return "GeneratorExp"
+
+            if isinstance(node, ast.comprehension):
+                return "comprehension"
+
+            # ---------- calls ----------
+
+            if isinstance(node, ast.Call):
+                return "Call"
+
+            if isinstance(node, ast.Lambda):
+                return "Lambda"
+
+            # ---------- exceptions ----------
+
+            if isinstance(node, ast.Try):
+                return "Try"
+
+            if isinstance(node, ast.ExceptHandler):
+                if node.name:
+                    return f"ExceptHandler: {node.name}"
+                return "ExceptHandler"
+
+            if isinstance(node, ast.Raise):
+                return "Raise"
+
+            if isinstance(node, ast.Assert):
+                return "Assert"
+
+            # ---------- assignments ----------
+
+            if isinstance(node, ast.Assign):
+                return "Assign"
+
+            if isinstance(node, ast.AnnAssign):
+                return "AnnAssign"
+
+            if isinstance(node, ast.AugAssign):
+                op = binop_map.get(type(node.op), type(node.op).__name__)
+                return f"AugAssign ({op}=)"
+
+            # ---------- fallback ----------
+
+            return type(node).__name__
         
         def get_filtered_vars(frame):
             globals_raw = self._safe_repr_dict(frame.f_globals)
@@ -884,7 +1097,7 @@ class VariableTracer:
                             # node line
                             print(
                                 f"{indent}│            "
-                                f"{prefix}{connector}{COLOR}{type(node).__name__}{RESET}"
+                                f"{prefix}{connector}{COLOR}{node_label(node)}{RESET}"
                             )
 
                             # prepare children (deterministic order)

@@ -22,3 +22,24 @@ test_walrus.py
 precedence_tuple.py
 test_exception1.py
 test_exception2.py, error
+test_exception3.py, error
+loop_alias_mutation.py
+test_basic_precedence.py
+test_bytecode_heavy_expr.py
+test_class_obj_alias.py
+test_compre_nested.py
+test_control_flow_indentation.py
+test_empty_noop_comment.py
+test_extreme_alias.py
+test_func_global.py
+test_import.py
+test_match.py
+test_mixed.py
+test_multiline.py
+test_nesting.py
+test_star_unpack.py
+test_type_repr.py
+test_walrus2.py
+test_with_context.py
+test_worst_case_ast_exec.py
+
