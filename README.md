@@ -60,11 +60,11 @@ TracerSET presents these perspectives in a single environment where:
 - Variable states shown before each statement executes
 - Scope and alias views reflect runtime state at each execution step, based on frame reachability rather than object storage structure
 - Source code highlighting during execution
-- Token-level analysis (advanced mode)
+- Token stream analysis (whole-program and execution-aligned views)
 - Concrete Syntax Tree (CST) visualization
-- Abstract Syntax Tree (AST) visualization
+- Abstract Syntax Tree (AST) analysis (whole-program and execution-aligned views)
 - Control Flow Graph (CFG) generation
-- Python bytecode disassembly
+- Python bytecode analysis (whole-program and execution-aligned views)
 - Execution tracing via Python `trace` module
 - Alias sets (advanced mode)
 - Cognitive complexity score
@@ -122,20 +122,23 @@ This mode exposes both compiler-level structure and detailed runtime behavior fo
 Includes:
 - Source code display
 - Control Flow Graph (CFG)
-- Tokens (lexical analysis)
+- Whole-program token stream analysis
+- Execution-aligned token stream visualization
 - Concrete Syntax Tree (CST)
-- Abstract Syntax Tree (AST)
-- Python bytecode disassembly
+- Whole-program Abstract Syntax Tree (AST)
+- Execution-aligned AST visualization
+- Whole-program Python bytecode disassembly
+- Execution-aligned VM instruction visualization
 - Program execution trace (Python trace module output)
 - Step-by-step program execution trace (custom detailed tracer)
-- Alias sets (ALIAS)
+- Execution-aligned Alias sets (ALIAS)
 - Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This final stage provides complete visibility into:
-- lexical structure (tokens)
-- syntactic structure (CST, AST)
+- lexical structure (whole-program and execution-aligned token views)
+- syntactic structure (CST and AST)
 - control-flow structure (CFG)
-- bytecode-level representation
+- bytecode-level representation (whole-program and execution-aligned views)
 - runtime execution behavior
 
 ---
@@ -156,16 +159,15 @@ This final stage provides complete visibility into:
 ## Design Philosophy
 TracerSET is built on the principle of execution-centric program comprehension, where:
 - Static program structure (tokens, CST, AST, CFG, cognitive complexity, bytecode) is computed as whole-program representations
-- Dynamic runtime behavior (stack, variables, execution trace, bytecode) is observed step-by-step
-
+- Dynamic runtime behavior (stack, variables, aliases, execution trace, execution-aligned AST nodes, execution-aligned token streams, and execution-aligned VM instructions) is observed step-by-step
+    
 These two perspectives are presented in sequence, enabling users to first understand program structure and then observe its runtime behavior during execution. This enables users to observe not only what a program executes, but how its execution unfolds over time.
 
 ---
 
 ## Notes on Python Bytecode and Runtime Behavior
 
-TracerSET intentionally exposes the exact CPython bytecode sequence generated
-for each source line and execution step.
+TracerSET computes whole-program CPython bytecode disassembly and exposes execution-aligned VM instructions associated with each executed source line during tracing.
 
 The displayed VM instructions are not simplified, hidden, or normalized.
 This is intentional because:
