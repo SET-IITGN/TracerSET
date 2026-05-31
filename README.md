@@ -8,6 +8,8 @@ TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_com
 ## System Requirements
 - Python >=3.10
 - Linux / Windows
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.1.5/tracerset-1.1.5-py3-none-any.whl), and Install from the same directory using ```pip3 install tracerset-1.1.5-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.1.5-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
@@ -76,10 +78,10 @@ TracerSET presents these perspectives in a single environment where:
 
 ## Usage
 ```
-python3 tracerset.py <file.py> #defaults to beginner
-python3 tracerset.py beginner <file.py>
-python3 tracerset.py intermediate <file.py>
-python3 tracerset.py advanced <file.py>
+tracerset <file.py> #defaults to beginner
+tracerset beginner <file.py>
+tracerset intermediate <file.py>
+tracerset advanced <file.py>
 ```
 
 ### ```beginner```
