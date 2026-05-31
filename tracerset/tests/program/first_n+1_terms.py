@@ -1,0 +1,11 @@
+g1 = 1.57
+g2 = 2.33
+n = int(input())
+print(g1,g2,end=" ")
+i=2
+while i<=n:
+    temp=g2
+    g2=((g2+g1)/(g2-g1))
+    print(round(g2,5),end=" ")
+    g1=temp
+    i=i+1

@@ -1,0 +1,1350 @@
+import sys
+import ast
+import traceback
+import linecache
+import os
+import types
+import dis
+import io
+import tokenize
+from collections import defaultdict
+import ast
+
+COLOR = "\033[93m"
+ERROR = "\033[91m"
+SUCCESS = "\033[92m"
+CURR = "\033[92m"
+INFO = "\033[96m"
+RESET = "\033[0m"
+flag=0
+
+MODE_BEGINNER = "beginner"
+MODE_INTERMEDIATE = "intermediate"
+MODE_ADVANCED = "advanced"
+MODE=''
+
+def clear_screen():
+    if sys.stdin.isatty():
+        rows = os.get_terminal_size().lines
+        # Natural scroll
+        for _ in range(rows-1):
+            print()
+        # Reposition cursor
+        print("\033[H", end="", flush=True)
+
+def getch():
+    if sys.stdin.isatty():
+        sys.stdin.read(1)
+        clear_screen()
+        
+def is_file_like(v):
+    return (
+        isinstance(v, io.IOBase)
+        or (
+            hasattr(v, "read")
+            and hasattr(v, "write")
+        )
+    )
+    
+def safe_call(fn):
+    try:
+        return fn()
+    except Exception:
+        return "<unavailable>"
+
+class VariableTracer:
+    def __init__(self, script_path):
+        self.script_path = script_path
+        self.script_dir = os.path.dirname(self.script_path)
+        self.user_vars = set()
+        self.linecache_cache = {}
+        
+        # Setup local imports
+        self.original_path = sys.path.copy()
+        if self.script_dir not in sys.path:
+            sys.path.insert(0, self.script_dir)
+            
+        self.project_root = os.path.dirname(os.path.abspath(self.script_path))
+        self.tracer_file = os.path.abspath(__file__)
+    
+    def cleanup(self):
+        """Restore original sys.path."""
+        sys.path[:] = self.original_path
+    
+    def extract_user_variables(self):
+        """Extract ALL user variable names using comprehensive AST analysis."""
+        try:
+            with open(self.script_path, 'r', encoding='utf-8') as f:
+                source = f.read()
+        except Exception as e:
+            print(f"Error reading {self.script_path}: {e}")
+            sys.exit(1)
+        
+        try:
+            tree = ast.parse(source)
+        except SyntaxError as e:
+            print(f"Syntax error in {self.script_path}: {e}")
+            sys.exit(1)
+        
+        # Comprehensive AST walker
+        for node in ast.walk(tree):
+            self._collect_variables(node)
+        
+        # Remove built-ins, Python internals, and common modules
+        exclude_set = self._get_exclude_set()
+        self.user_vars -= exclude_set
+        
+        return self.user_vars
+    
+    def is_user_defined_class(self, cls):
+        '''
+        try:
+            return (
+                hasattr(cls, "__module__") and
+                cls.__module__ == "__main__"
+            )
+        except Exception:
+            return False
+        '''    
+        try:
+            return (
+                isinstance(cls, type)
+                and cls.__module__ == "__main__"
+            )
+        except Exception:
+            return False
+
+    def is_user_frame(self, filename):
+        filename = os.path.abspath(filename)
+
+        # tracer itself
+        if os.path.basename(filename) == "detailed.py":
+            return False
+
+        # frozen / importlib
+        if "<frozen importlib" in filename:
+            return False
+
+        # stdlib directory
+        stdlib_dir = os.path.dirname(os.__file__)
+        if filename.startswith(stdlib_dir):
+            return False
+
+        # venv / site-packages
+        site_dirs = [p for p in sys.path if "site-packages" in p or "dist-packages" in p]
+        if any(filename.startswith(p) for p in site_dirs):
+            return False
+
+        # finally restrict to project only
+        return filename.startswith(self.project_root)
+
+    def _collect_variables(self, node):
+        """Recursively collect all variable names from AST node."""
+        
+        # Assignments
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                self._collect_target_names(target)
+        elif isinstance(node, ast.AnnAssign) and node.target:
+            self._collect_target_names(node.target)
+        elif isinstance(node, ast.AugAssign):
+            self._collect_target_names(node.target)
+        
+        # WALRUS OPERATOR (x := expr)
+        elif isinstance(node, ast.NamedExpr):
+            self._collect_target_names(node.target)
+        
+        # Loop variables
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            self._collect_target_names(node.target)
+        elif isinstance(node, ast.While):
+            pass  # No new variables
+        
+        # Context manager variables
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                if item.optional_vars:
+                    self._collect_target_names(item.optional_vars)
+        
+        # Exception handlers
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            self._collect_target_names(node.name)
+        
+        # Name usages
+        elif isinstance(node, ast.Name):
+            self._collect_target_names(node)
+        
+        # Function definitions
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            self.user_vars.add(node.name)
+            self._collect_function_params(node)
+        
+        # Class definitions
+        elif isinstance(node, ast.ClassDef):
+            self.user_vars.add(node.name)
+        
+        # Lambda parameters
+        elif isinstance(node, ast.Lambda):
+            self._collect_function_params(node)
+        
+        # Comprehension variables
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            for gen in node.generators:
+                self._collect_target_names(gen.target)
+        elif isinstance(node, ast.comprehension):
+            self._collect_target_names(node.target)
+        
+        # MATCH / CASE (Python 3.10+ structural pattern matching)    
+        elif isinstance(node, ast.MatchAs):
+            if node.name:
+                self.user_vars.add(node.name)
+        elif isinstance(node, ast.MatchStar):
+            if node.name:
+                self.user_vars.add(node.name)
+        elif isinstance(node, ast.MatchMapping):
+            '''
+            for key, pattern in zip(node.keys, node.patterns):
+                self._collect_variables(pattern)
+            '''
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+        elif isinstance(node, ast.MatchClass):
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+        elif isinstance(node, ast.MatchSequence):
+            for pattern in node.patterns:
+                self._collect_variables(pattern)
+                
+        # IMPORTS (these introduce names)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                self.user_vars.add(alias.asname or alias.name.split(".")[0])
+
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                self.user_vars.add(alias.asname or alias.name)
+    
+    def _collect_target_names(self, node):
+        """Extract names from complex targets (tuples, lists, starred)."""
+        '''
+        if isinstance(node, ast.Name):
+            if isinstance(node.ctx, (ast.Store, ast.Param)):
+                self.user_vars.add(node.id)
+        '''
+        if isinstance(node, ast.Name):
+            self.user_vars.add(node.id)
+        elif isinstance(node, (ast.Tuple, ast.List)):
+            for elt in node.elts:
+                self._collect_target_names(elt)
+        elif isinstance(node, ast.Starred):
+            self._collect_target_names(node.value)
+        elif isinstance(node, ast.Attribute):
+            pass
+    
+    def _collect_function_params(self, node):
+        """Extract all function/lambda parameter names."""
+        '''
+        args = node.args if hasattr(node, 'args') else node
+        for arg in args.args:
+            self.user_vars.add(arg.arg)
+        for arg in args.kwonlyargs:
+            self.user_vars.add(arg.arg)
+        if args.vararg:
+            self.user_vars.add(args.vararg.arg)
+        if args.kwarg:
+            self.user_vars.add(args.kwarg.arg)
+        '''
+        args = node.args
+        for arg in getattr(args, "posonlyargs", []):
+            self.user_vars.add(arg.arg)
+        for arg in args.args:
+            self.user_vars.add(arg.arg)
+        for arg in args.kwonlyargs:
+            self.user_vars.add(arg.arg)
+        if args.vararg:
+            self.user_vars.add(args.vararg.arg)
+        if args.kwarg:
+            self.user_vars.add(args.kwarg.arg)
+    
+    '''
+    def _get_exclude_set(self):
+        """Get comprehensive set of names to exclude."""
+        builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
+        exclude = builtins.copy()
+        exclude.update([
+            
+            # Python internals
+            '__name__', '__doc__', '__package__', '__loader__', '__spec__',
+            '__annotations__', '__file__', '__cached__', '__builtins__',
+            '__dict__', '__module__', '__qualname__', '__init__', '__str__',
+            '__repr__', '__call__', '__getattr__', '__setattr__',
+            
+            # Keywords & constants
+            'True', 'False', 'None', 'NotImplemented', 'Ellipsis',
+            
+            # Common conventions
+            'args', 'kwargs', 'self', 'cls', 'super',
+            
+            # Common modules (avoid false positives)
+            'sys', 'os', 'time', 'json', 're', 'math', 'random',
+            'collections', 'itertools', 'functools', 'typing', 'pathlib',
+            'datetime', 'decimal', 'fractions', 'statistics'
+        ])
+        
+        return exclude
+    '''
+    def _get_exclude_set(self):
+        builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
+        exclude = set(builtins)
+        exclude.update({
+            "True", "False", "None", "NotImplemented", "Ellipsis",
+            "__debug__",
+            #"__annotations__","args", "kwargs", "cls", "super"
+        })
+
+        return exclude
+    
+    def get_line_source(self, filename, line_no):
+        """Safely get source line with caching."""
+        key = (filename, line_no)
+        if key not in self.linecache_cache:
+            try:
+                self.linecache_cache[key] = linecache.getline(filename, line_no).rstrip('\n\r')
+            except:
+                self.linecache_cache[key] = f"<line {line_no} unavailable>"
+        return self.linecache_cache[key]
+    
+    def print_code_file(self, filename, current_line):
+        print("\n" + "─" * 60)
+        print(f"FILE : {os.path.basename(filename)}\n")
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except Exception:
+            print("<unable to read source file>")
+            print("─" * 60)
+            return
+
+        for lineno, source in enumerate(lines, start=1):
+            source = source.rstrip('\n\r')
+            marker = "--> " if lineno == current_line else "    "
+            color = COLOR if lineno == current_line else RESET
+            print(
+                f"{color}"
+                f"{marker}{lineno:>3} │ {source}"
+                f"{RESET}"
+            )
+        print("\n" + "─" * 60)
+        
+    def create_tracer(self):
+        call_depth = 0
+        call_signatures = {}
+        def format_args(frame):
+            args = []
+
+            argcount = frame.f_code.co_argcount
+            argnames = frame.f_code.co_varnames[:argcount]
+
+            for name in argnames:
+                if name in frame.f_locals:
+                    value = frame.f_locals[name]
+                    value_repr = "<unavailable>"
+                    try:
+                        value_repr = repr(value)
+                        if ' object ' in value_repr:
+                            xbuff = value_repr.split('__main__.')[1]
+                            xbuff = xbuff.split('object')[0]
+                            xbuff = '<' + xbuff + f'object>{vars(value)}'
+                            value_repr = xbuff
+                        elif '<class' in value_repr:
+                            def transform(v, k):
+                                if 'function' in v:
+                                    return '<function>'
+                                return v
+                            xbuff = value.__name__
+                            temp_dict= {
+                                k: transform(v, k)
+                                for k, v in vars(value).items()
+                                    #if not k.startswith('_') or k.startswith('__init__')
+                                    if k in self.user_vars
+                            }
+                            xbuff = f'<class>{temp_dict}'
+                            value_repr = xbuff
+                    except Exception:
+                        value_repr = "<unrepr-able>"
+
+                    args.append(f"{name}={value_repr}")
+
+            return ", ".join(args)
+        
+        
+        def node_label(node):
+
+            binop_map = {
+                ast.Add: "+",
+                ast.Sub: "-",
+                ast.Mult: "*",
+                ast.Div: "/",
+                ast.FloorDiv: "//",
+                ast.Mod: "%",
+                ast.Pow: "**",
+                ast.MatMult: "@",
+                ast.LShift: "<<",
+                ast.RShift: ">>",
+                ast.BitAnd: "&",
+                ast.BitOr: "|",
+                ast.BitXor: "^",
+            }
+
+            cmp_map = {
+                ast.Eq: "==",
+                ast.NotEq: "!=",
+                ast.Lt: "<",
+                ast.LtE: "<=",
+                ast.Gt: ">",
+                ast.GtE: ">=",
+                ast.Is: "is",
+                ast.IsNot: "is not",
+                ast.In: "in",
+                ast.NotIn: "not in",
+            }
+
+            unary_map = {
+                ast.UAdd: "+",
+                ast.USub: "-",
+                ast.Not: "not",
+                ast.Invert: "~",
+            }
+
+            bool_map = {
+                ast.And: "and",
+                ast.Or: "or",
+            }
+
+            # ---------- identifiers ----------
+
+            if isinstance(node, ast.Name):
+                return f"Name: {node.id}"
+
+            if isinstance(node, ast.arg):
+                return f"arg: {node.arg}"
+
+            if isinstance(node, ast.Attribute):
+                return f"Attribute: {node.attr}"
+
+            if isinstance(node, ast.keyword):
+                if node.arg is None:
+                    return "keyword: **kwargs"
+                return f"keyword: {node.arg}"
+
+            if isinstance(node, ast.alias):
+                if node.asname:
+                    return f"alias: {node.name} as {node.asname}"
+                return f"alias: {node.name}"
+
+            # ---------- literals ----------
+
+            if isinstance(node, ast.Constant):
+                return f"Constant: {repr(node.value)}"
+
+            # ---------- definitions ----------
+
+            if isinstance(node, ast.FunctionDef):
+                return f"FunctionDef: {node.name}"
+
+            if isinstance(node, ast.AsyncFunctionDef):
+                return f"AsyncFunctionDef: {node.name}"
+
+            if isinstance(node, ast.ClassDef):
+                return f"ClassDef: {node.name}"
+
+            # ---------- operators ----------
+
+            if isinstance(node, ast.BinOp):
+                op = binop_map.get(type(node.op), type(node.op).__name__)
+                return f"BinOp ({op})"
+
+            if isinstance(node, ast.UnaryOp):
+                op = unary_map.get(type(node.op), type(node.op).__name__)
+                return f"UnaryOp ({op})"
+
+            if isinstance(node, ast.BoolOp):
+                op = bool_map.get(type(node.op), type(node.op).__name__)
+                return f"BoolOp ({op})"
+
+            if isinstance(node, ast.Compare):
+                ops = [
+                    cmp_map.get(type(op), type(op).__name__)
+                    for op in node.ops
+                ]
+                return f"Compare ({' '.join(ops)})"
+
+            # ---------- control flow ----------
+
+            if isinstance(node, ast.If):
+                return "If"
+
+            if isinstance(node, ast.For):
+                return "For"
+
+            if isinstance(node, ast.AsyncFor):
+                return "AsyncFor"
+
+            if isinstance(node, ast.While):
+                return "While"
+
+            if isinstance(node, ast.Break):
+                return "Break"
+
+            if isinstance(node, ast.Continue):
+                return "Continue"
+
+            if isinstance(node, ast.Pass):
+                return "Pass"
+
+            if isinstance(node, ast.Return):
+                return "Return"
+
+            if isinstance(node, ast.Yield):
+                return "Yield"
+
+            if isinstance(node, ast.YieldFrom):
+                return "YieldFrom"
+
+            # ---------- imports ----------
+
+            if isinstance(node, ast.Import):
+                return "Import"
+
+            if isinstance(node, ast.ImportFrom):
+                return f"ImportFrom: {node.module}"
+
+            # ---------- collections ----------
+
+            if isinstance(node, ast.List):
+                return "List"
+
+            if isinstance(node, ast.Tuple):
+                return "Tuple"
+
+            if isinstance(node, ast.Set):
+                return "Set"
+
+            if isinstance(node, ast.Dict):
+                return "Dict"
+
+            # ---------- comprehensions ----------
+
+            if isinstance(node, ast.ListComp):
+                return "ListComp"
+
+            if isinstance(node, ast.SetComp):
+                return "SetComp"
+
+            if isinstance(node, ast.DictComp):
+                return "DictComp"
+
+            if isinstance(node, ast.GeneratorExp):
+                return "GeneratorExp"
+
+            if isinstance(node, ast.comprehension):
+                return "comprehension"
+
+            # ---------- calls ----------
+
+            if isinstance(node, ast.Call):
+                return "Call"
+
+            if isinstance(node, ast.Lambda):
+                return "Lambda"
+
+            # ---------- exceptions ----------
+
+            if isinstance(node, ast.Try):
+                return "Try"
+
+            if isinstance(node, ast.ExceptHandler):
+                if node.name:
+                    return f"ExceptHandler: {node.name}"
+                return "ExceptHandler"
+
+            if isinstance(node, ast.Raise):
+                return "Raise"
+
+            if isinstance(node, ast.Assert):
+                return "Assert"
+
+            # ---------- assignments ----------
+
+            if isinstance(node, ast.Assign):
+                return "Assign"
+
+            if isinstance(node, ast.AnnAssign):
+                return "AnnAssign"
+
+            if isinstance(node, ast.AugAssign):
+                op = binop_map.get(type(node.op), type(node.op).__name__)
+                return f"AugAssign ({op}=)"
+
+            # ---------- fallback ----------
+
+            return type(node).__name__
+        
+        def get_filtered_vars(frame):
+            globals_raw = self._safe_repr_dict(frame.f_globals)
+            locals_raw = self._safe_repr_dict(frame.f_locals)
+
+            def transform(v, k):
+                if isinstance(v,str):
+                    if '<module' in v:
+                        return '<module>'
+                    if '<function' in v and 'class' not in v:
+                        return '<function>'
+                elif not isinstance(v,str):
+                    if '<module' in repr(v):
+                        return '<module>'
+                    if '<function' in repr(v) and 'class' not in repr(v):
+                        return '<function>'
+                return v
+
+            globals_dict = {
+                k: transform(v, k)
+                for k, v in globals_raw.items()
+                if not k.startswith('_')
+            }
+            
+            globals_dict.update({
+                k: transform(v, k)
+                for k, v in globals_raw.items()
+                if k in self.user_vars
+            })
+
+            locals_dict = {
+                k: transform(v, k)
+                for k, v in locals_raw.items()
+                if not k.startswith('_')
+            }
+            
+            locals_dict.update({
+                k: transform(v, k)
+                for k, v in locals_raw.items()
+                if k in self.user_vars
+            })
+
+            return globals_dict, locals_dict
+
+        def build_alias_graph(frame):
+            alias = {}
+
+            def add(scope, prefix):
+                for k, v in scope.items():
+                    #if k.startswith("__"):
+                    if k not in self.user_vars:
+                        continue
+
+                    # IMPORTANT: skip modules/functions only for clarity (optional)
+                    if isinstance(v, types.ModuleType):
+                        continue
+                    try:
+                        oid = id(v)
+                        alias[(prefix, k)] = oid
+                    except Exception:
+                        continue
+
+            add(frame.f_locals, "L")
+            add(frame.f_globals, "G")
+
+            return alias
+
+        def get_alias_sets(frame):
+            '''
+            alias_map = build_alias_graph(frame)
+
+            groups = {}
+            for (scope, var), oid in alias_map.items():
+                groups.setdefault(oid, []).append(f"{scope}.{var}")
+
+            # keep ALL sets including singletons
+            alias_sets = list(groups.values())
+
+            return alias_sets
+            '''
+            object_groups = {}
+
+            # ---------- LOCALS ----------
+            for name, value in frame.f_locals.items():
+                #if name.startswith("__"):
+                if name not in self.user_vars:
+                    continue
+                if isinstance(value, types.ModuleType):
+                    continue
+                if isinstance(value, types.FunctionType):
+                    continue
+                oid = id(value)
+                if oid not in object_groups:
+                    object_groups[oid] = set()
+                object_groups[oid].add(f"L.{name}")
+
+            # ---------- GLOBALS ----------
+            for name, value in frame.f_globals.items():
+                #if name.startswith("__"):
+                if name not in self.user_vars:
+                    continue
+                if isinstance(value, types.ModuleType):
+                    continue
+                if isinstance(value, types.FunctionType):
+                    continue
+                oid = id(value)
+                if oid not in object_groups:
+                    object_groups[oid] = set()
+                object_groups[oid].add(f"G.{name}")
+            # Convert to stable printable form
+            alias_sets = []
+            for vars_set in object_groups.values():
+                alias_sets.append(
+                    "{" + ", ".join(sorted(vars_set)) + "}"
+                )
+            alias_sets.sort()
+            return " ".join(alias_sets)    
+            
+        def print_alias_graph(alias_sets):
+            '''
+            if not alias_sets:
+                print('{}')
+                return
+
+            formatted = []
+            for s in alias_sets:
+                if len(s) == 1:
+                    formatted.append("{" + s[0] + "}")
+                else:
+                    formatted.append("{" + ", ".join(sorted(s)) + "}")
+
+            print(" ".join(formatted))
+            '''
+            if not alias_sets:
+                print("{}")
+                return
+
+            print(alias_sets)
+        
+        def get_stack(frame):
+            stack = []
+            current = frame
+            '''
+            while current:
+                filename = os.path.abspath(current.f_code.co_filename)
+
+                # Ignore tracer implementation frames
+                #if os.path.basename(filename) != "detailed.py":
+                basename = os.path.basename(filename)
+                #if (basename != "detailed.py" and "<frozen importlib" not in filename):
+                if self.is_user_frame(current.f_code.co_filename):
+                    
+                    stack.append(
+                    (
+                        current.f_code.co_name,
+                        current.f_lineno,
+                        filename
+                    )                    
+                )
+                    
+                    signature = call_signatures.get(id(current), "")
+
+                    stack.append(
+                        (
+                            (
+                                f"{current.f_code.co_name}({signature})"
+                                if signature else
+                                f"{current.f_code.co_name}()"
+                            ),
+                            current.f_lineno,
+                            filename
+                        )
+                    ) 
+                
+                current = current.f_back
+            '''
+            while current:
+                filename = current.f_code.co_filename
+                if self.is_user_frame(filename):
+                    signature = call_signatures.get(id(current), "")
+                    stack.append(
+                        (
+                            (
+                                f"{current.f_code.co_name}({signature})"
+                                if signature
+                                else f"{current.f_code.co_name}()"
+                            ),
+                            current.f_lineno,
+                            filename
+                        )
+                    )
+
+                current = current.f_back
+            stack.reverse()
+            return stack  
+
+        def print_stack(frame, active_only=False, event_type=None, switch=2):
+            stack = get_stack(frame)
+            print("\nRUNTIME STACK:")
+            
+            SCOLOR=RESET
+            if switch==0:
+                SCOLOR=CURR
+            elif switch==1:
+                SCOLOR=COLOR
+            
+            for depth, (func_signature, lineno, filename) in enumerate(stack):
+                indent = "│   " * depth
+                if depth == len(stack) - 1:
+                    if event_type == "return":
+                        marker = "└── RETURNING"
+                    else:
+                        marker = f"{SCOLOR}└── ACTIVE"
+                else:
+                    marker = "├──"
+
+                if active_only and depth != len(stack) - 1:
+                    continue
+                
+                print(
+                    f"{indent}{marker} "
+                    f"{func_signature} "
+                    f"[{os.path.basename(filename)}:{lineno}]{RESET}"
+                )
+
+        def get_line_instructions(frame, line_no):
+            """
+            Return ALL bytecode instructions associated
+            with the current source line.
+            """
+
+            try:
+
+                instructions = list(
+                dis.get_instructions(frame.f_code)
+                )
+
+                result = []
+
+                current_line = None
+
+                for ins in instructions:
+
+                    # CPython marks beginning of source line
+                    if ins.starts_line is not None:
+                        current_line = ins.starts_line
+
+                    if current_line == line_no:
+                        result.append(ins)
+
+                return result
+
+            except Exception:
+                return []
+                
+        
+        def get_current_tokens(fname):
+            token_line_map = defaultdict(list)
+        
+            with open(fname, "r", encoding="utf-8") as f:
+                xsource = f.read()
+            
+            for xtok in tokenize.generate_tokens(io.StringIO(xsource).readline):
+                token_line_map[xtok.start[0]].append(
+                    f"{tokenize.tok_name[xtok.type]}: {repr(xtok.string)}"
+                )
+            
+            return token_line_map
+        
+        def get_current_ast(fname):
+            ast_line_map = defaultdict(list)
+        
+            with open(fname, "r", encoding="utf-8") as f:
+                xsource = f.read()
+            
+            xtree = ast.parse(xsource)
+
+            for xnode in ast.walk(xtree):
+                if hasattr(xnode, "lineno"):
+                    line = xnode.lineno
+                    ast_line_map[line].append(xnode)
+                
+            return ast_line_map
+        
+        def tracer(frame, event, arg):
+            global MODE
+            nonlocal call_depth
+            filename = frame.f_code.co_filename
+            
+            # (early filter)
+            if not self.is_user_frame(filename):
+                return tracer
+            
+            filename = os.path.abspath(filename)
+            
+            '''
+            # Ignore the tracer implementation itself
+            if os.path.basename(filename) == "detailed.py":
+                return tracer
+
+            # Ignore non-user code
+            if not filename.startswith(self.project_root):
+                return tracer
+
+            # Ignore Python internals / virtual envs / site-packages
+            exclude_dirs = (
+                sys.prefix,
+                sys.exec_prefix,
+            )
+
+            if filename.startswith(exclude_dirs):
+                return tracer   
+            '''
+            if not self.is_user_frame(filename):
+                return tracer 
+                
+            func_name = frame.f_code.co_name
+            
+            token_line_map = get_current_tokens(filename)
+            ast_line_map = get_current_ast(filename)
+            
+            # ==========================================================
+            # FUNCTION CALL
+            # ==========================================================
+            if event == 'call':
+                indent = "│   " * call_depth
+                args_str = format_args(frame)
+                call_signatures[id(frame)] = args_str
+                globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
+                
+                '''
+                print(f"{indent}│  LOCALS   : {locals_dict}")
+                print(f"{indent}│  GLOBALS  : {globals_dict}")
+                '''
+                
+                #print(f"\n{indent}┌─ CALL depth={call_depth}")
+                #print(f"{indent}│  Function : {func_name}({args_str})")
+                if func_name == "<module>":
+                    print(f"{indent}│  Function CALL: <module>()")
+                elif func_name == "<class>":
+                    print(f"{indent}│  Function CALL: <class>()")
+                elif func_name == "<object>":
+                    print(f"{indent}│  Function CALL: <object>()")
+                else:
+                    print(f"{indent}│  Function CALL: {func_name}({args_str})")
+                #print(f"{indent}│  Line     : {frame.f_lineno}")
+                print_stack(frame, active_only=False,switch=0)
+                '''
+                print(f"{indent}└────────────────────────────────")
+                '''
+                call_depth += 1
+                return tracer
+
+            # ==========================================================
+            # FUNCTION RETURN
+            # ==========================================================
+            elif event == 'return':
+                indent = "│   " * (call_depth - 1)
+                '''
+                print(f"\n{indent}┌─ RETURN depth={call_depth - 1}")
+                print(f"{indent}│  Function : {func_name}()")
+                '''
+                globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
+                
+                print(f"{indent}│   <---program state immediately before RETurning--->")
+                print(f"{indent}│   LOCALS   : {locals_dict}")
+                print(f"{indent}│   GLOBALS  : {globals_dict}")
+                if MODE == MODE_ADVANCED:
+                    print(f"{indent}│   ALIAS    : ",end='')
+                    print_alias_graph(alias_sets)
+                '''
+                print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                getch()
+                '''
+                args_str = call_signatures.get(id(frame), "")
+                try:
+                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {repr(arg)}{RESET}")
+                except Exception:
+                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : <unrepr-able>{RESET}")
+                
+                if frame.f_back:
+                    #print_stack(frame.f_back, active_only=True)
+                    print_stack(frame.f_back, active_only=False)
+                '''
+                print(f"{indent}└────────────────────────────────")
+                '''
+                # stop tracing once user stack becomes empty
+                if call_depth == 1 and func_name == "<module>":
+                    sys.settrace(None)
+                
+                call_depth -= 1
+                
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
+                
+                return tracer
+            
+            # ==========================================================
+            # EXCEPTION
+            # ==========================================================
+            elif event == 'exception':
+                indent = "│   " * call_depth
+
+                exc_type, exc_value, exc_tb = arg
+
+                print(f"{indent}│   {ERROR}EXCEPTION RAISED!{RESET}")
+                print(f"{indent}│   Type  : {ERROR}{exc_type.__name__}{RESET}")
+                print(f"{indent}│   Value : {ERROR}{exc_value}{RESET}")
+
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
+
+                return tracer
+               
+            # ==========================================================
+            # LINE EXECUTION
+            # ==========================================================
+            elif event == 'line':
+                line_no = frame.f_lineno
+                line_source = self.get_line_source(
+                    filename,
+                    line_no
+                )
+
+                stripped = line_source.strip()
+
+                if (
+                    not stripped or
+                    stripped.startswith('#') or
+                    stripped == 'pass'
+                ):
+                    return tracer
+
+                indent = "│   " * call_depth
+
+                globals_dict, locals_dict = get_filtered_vars(frame)
+                alias_sets = get_alias_sets(frame)
+                line_instructions = get_line_instructions(frame,line_no)
+                self.print_code_file(filename, line_no)
+                
+                '''
+                print(f"\n{indent}├─ LINE {line_no}")
+                print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+                #self.print_code_file(filename, line_no)
+                print(f"{indent}│  LOCALS  : {locals_dict}")
+                print(f"{indent}│  GLOBALS : {globals_dict}")
+                #self.print_code_file(filename, line_no)
+                print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                getch()
+                '''
+                print(f"\n{indent}├─ LINE {line_no}")
+                print(f"{indent}│  CODE    : {COLOR}{line_source.strip()}{RESET}")
+
+                #-----------------[BEGIN] bytecode instruction list for a source line-----------------
+                if MODE == MODE_ADVANCED:
+                    
+                    line_ast_nodes = ast_line_map.get(line_no, [])
+                    if line_ast_nodes:
+                        print(f"{indent}│  AST     :")
+
+                        root = line_ast_nodes[0]
+
+                        # -------- deterministic DFS (NO ast.walk) --------
+                        def iter_children(node):
+                            # deterministic: iter_fields preserves definition order
+                            for _, value in ast.iter_fields(node):
+                                if isinstance(value, ast.AST):
+                                    yield value
+                                elif isinstance(value, list):
+                                    for item in value:
+                                        if isinstance(item, ast.AST):
+                                            yield item
+
+                        # -------- collect nodes matching line --------
+                        filtered = []
+
+                        def dfs(node):
+                            if hasattr(node, "lineno") and node.lineno == line_no:
+                                filtered.append(node)
+
+                            for child in iter_children(node):
+                                dfs(child)
+
+                        dfs(root)
+
+                        # -------- deterministic output order --------
+                        seen = set()
+
+                        def print_tree(node, prefix="", is_last=True, depth=0):
+                            if id(node) in seen:
+                                return
+                            seen.add(id(node))
+
+                            if not hasattr(node, "lineno") or node.lineno != line_no:
+                                return
+
+                            # connector
+                            connector = f"{INFO}└──{RESET} " if is_last else f"{INFO}├──{RESET} "
+
+                            # node line
+                            print(
+                                f"{indent}│            "
+                                f"{prefix}{connector}{COLOR}{node_label(node)}{RESET}"
+                            )
+
+                            # prepare children (deterministic order)
+                            children = [
+                                c for c in iter_children(node)
+                                if hasattr(c, "lineno") and c.lineno == line_no
+                            ]
+
+                            # print children
+                            for i, child in enumerate(children):
+                                last = (i == len(children) - 1)
+
+                                extension = "    " if is_last else f"{INFO}│{RESET}   "
+
+                                print_tree(
+                                    child,
+                                    prefix + extension,
+                                    last,
+                                    depth + 1
+                                )
+
+                        print_tree(root)
+                        
+                    line_tokens = token_line_map.get(line_no, [])
+                    if line_tokens:
+                        print(f"{indent}│  TOKENS  :")
+                        for tok in line_tokens:
+                            print(
+                                f"{indent}│            "
+                                f"{COLOR}{tok}{RESET}"
+                            )   
+                                         
+                    if line_instructions:
+                        print(f"{indent}│  VM INS  :")
+                        for ins in line_instructions:
+                            argval = ""
+                            if ins.argval is not None:
+                                argval = repr(ins.argval)
+                                if ' object ' in argval:
+                                    #example: <code object f at 0x7f25ed642a20, ...>
+                                    try:
+                                        zbuff=argval.split(' at ')[0]
+                                        argval=zbuff[1:]
+                                        zbuff=argval.split()
+                                        argval=f"<{' '.join(zbuff[:2])}>"
+                                    except Exception:
+                                        argval=""
+                                        
+                            print(
+                                f"{indent}│            "
+                                #f"{COLOR}{ins.offset} "
+                                f"{COLOR}{ins.opname} "
+                                f"{argval}{RESET}"
+                            )
+                #------------------[END] bytecode instruction list for a source line-----------------
+                        
+                print(f"{indent}│  <---program state immediately before EXEcuting above CODE line--->")
+                print(f"{indent}│  LOCALS  : {locals_dict}")
+                print(f"{indent}│  GLOBALS : {globals_dict}")
+                if MODE == MODE_ADVANCED:   
+                    print(f"{indent}│  ALIAS   : ",end='')
+                    print_alias_graph(alias_sets)
+                print_stack(frame, active_only=False,switch=1)
+                if sys.stdin.isatty():
+                    print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
+                    getch()
+                
+                return tracer
+            return tracer
+        return tracer
+    
+    def _safe_repr_dict(self, dct):
+        """Safely convert dictionary values to repr strings."""
+        result = {}
+        for k, v in dct.items():
+            try:
+                #result[k] = repr(v)
+                if isinstance(v, types.FunctionType):
+                    result[k] = f"<function {v.__name__}>" #reduce-noise
+                elif ' object ' in repr(v):
+                    #example: <__main__.Animal object at 0x7f339319a590>
+                    buff=repr(v).split('__main__.')[1]
+                    #example: <__main__.Animal object at 0x7f339319a590>
+                    buff=buff.split('object')[0]
+                    #'Animal '
+                    buff='<'+buff+f'object>{vars(v)}'
+                    result[k] = buff
+                #elif '<class ' in repr(v):
+                elif isinstance(v, type) and self.is_user_defined_class(v):
+                    def transform(vv, kk):
+                        if isinstance(vv,str):
+                            if 'function' in vv:
+                                return '<function>'
+                        elif not isinstance(vv,str):
+                            if '<module' in repr(vv):
+                                return '<module>'
+                            if '<function' in repr(vv) and 'class' not in repr(vv):
+                                return '<function>'
+                        return vv
+                    xbuff = v.__name__
+                    temp_dict= {
+                        xk: transform(xv, xk)
+                        for xk, xv in vars(v).items()
+                            #if not xk.startswith('_') or xk.startswith('__init__')
+                            if xk in self.user_vars
+                    }
+                    xbuff = f'<class>{temp_dict}'
+                    result[k] = xbuff
+                elif is_file_like(v):
+                    try:
+                        result[k] = f"<type='{type(v).__name__}' name='{v.name}' "
+                        result[k] +=f"mode='{v.mode}' "
+                        result[k] +=f"encoding='{getattr(v, 'encoding', None)}' "
+                        result[k] +=f"closed={v.closed} "
+                        
+                        # Current stream cursor position
+                        result[k] +=f"position={safe_call(v.tell)} "
+                        
+                        # Stream capabilities
+                        result[k] +=f"readable={safe_call(v.readable)} "
+                        result[k] +=f"writable={safe_call(v.writable)}"
+                        
+                        # buffering / durability semantics
+                        if not v.closed:
+                            try:
+                                pending = False
+
+                                # TextIOWrapper -> BufferedWriter
+                                if hasattr(v, "buffer"):
+                                    raw_buffer = v.buffer
+
+                                    # Buffered layer may expose pending bytes
+                                    if hasattr(raw_buffer, "raw"):
+                                        pending = True
+
+                                result[k] += f" buffered={pending}"
+
+                            except Exception:
+                                result[k] += " buffered=<unknown>"
+                        
+                        result[k] += '>'
+                        
+                    except Exception:
+                        result[k] = f"<{type(v).__name__}>"
+                elif isinstance(v, str):
+                    result[k] = v
+                elif isinstance(v, (int, float, bool, type(None))):
+                    result[k] = v
+                elif hasattr(v, "__repr__") and not isinstance(v, (str, int, float, bool, type(None))):
+                    result[k] = v
+                else:
+                    result[k] = repr(v)
+            except Exception:
+                result[k] = f"<{type(v).__name__}: unrepresentable>"
+        return result
+
+def main():
+    if len(sys.argv) != 3:
+        print(f'''{COLOR}Usage:
+       python3 detailed.py beginner <file.py> 
+       python3 detailed.py intermediate <file.py>
+       python3 detailed.py advanced <file.py>{RESET}''')
+        print("\nComprehensive Python Variable Tracer:")
+        print("• Tracks ALL user local/global variables")
+        print("• Handles classes, functions, comprehensions, context managers")
+        print("• Shows variable states BEFORE each statement executes")
+        print(f"• Safe repr() handling, no crashes")
+        sys.exit(1)
+    global MODE
+    MODE=sys.argv[1].lower()
+    script_path = sys.argv[2]
+    
+    if MODE not in [MODE_BEGINNER,MODE_INTERMEDIATE,MODE_ADVANCED]:
+        print(f"{ERROR}Invalid mode:{RESET} {MODE}")
+        print(f"\nAvailable modes:{COLOR}")
+        for m in [MODE_BEGINNER,MODE_INTERMEDIATE,MODE_ADVANCED]:
+            print(f"{m}")
+        print(f"{RESET}")
+        sys.exit(1)
+    
+    # Validate script exists
+    if not os.path.exists(script_path):
+        print(f"Error: File '{script_path}' not found.")
+        sys.exit(1)
+    
+    if not script_path.endswith('.py'):
+        print(f"Warning: '{script_path}' doesn't end with .py")
+    
+    print("Initializing comprehensive variable tracer...")
+    
+    # Initialize tracer
+    tracer = VariableTracer(script_path)
+    
+    # Extract variables
+    user_vars = tracer.extract_user_variables()
+    
+    if not user_vars:
+        print("No user variables found (only built-ins used)")
+        print("   This is normal for scripts that only use built-in functions.")
+        return
+    
+    print(f"Found {len(user_vars)} user variable(s):")
+    print(f"   {', '.join(sorted(user_vars))}")
+    print(f"{'='*80}")
+    
+    # Setup execution environment
+    exec_globals = {
+        '__name__': '__main__',
+        '__file__': os.path.abspath(script_path),
+        '__package__': None,
+        '__loader__': None,
+        '__spec__': None,
+        '__builtins__': __builtins__
+    }
+    
+    # Compile and execute
+    try:
+        with open(script_path, 'r', encoding='utf-8') as f:
+            source = f.read()
+        
+        code = compile(source, script_path, 'exec')
+        
+        # Install tracer
+        sys.settrace(tracer.create_tracer())
+        
+        clear_screen()
+        print("Starting execution with tracing...")
+        print(f"{INFO}Variable states shown BEFORE each statement executes")
+        print(f"Scope View: LOCALS and GLOBALS are reachability views\nfrom the current execution context (frame), not object storage{RESET}")
+        print(f"{'='*80}")
+        
+        exec(code, exec_globals)
+        
+    except SyntaxError as e:
+        print(f"Syntax error: {e}")
+        sys.exit(1)
+    except SystemExit:
+        pass  # Allow sys.exit()
+    except KeyboardInterrupt:
+        print("\nExecution interrupted by user")
+    except Exception as e:
+        print(f"\nExecution error: {type(e).__name__}: {e}")
+        traceback.print_exc()
+    finally:
+        sys.settrace(None)
+        tracer.cleanup()
+    
+if __name__ == "__main__":
+    main()
+

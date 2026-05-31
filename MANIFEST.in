@@ -1,4 +1,4 @@
-prune tests
-exclude make.cmd
-exclude Makefile
-exclude pytest.ini
+prune tracerset/tests
+exclude tracerset/make.cmd
+exclude tracerset/Makefile
+exclude tracerset/pytest.ini

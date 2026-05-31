@@ -17,10 +17,5 @@ dependencies = [
     "complexipy"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["tracerset*"]
-exclude = ["tests*"]
-
 [project.scripts]
 tracerset = "tracerset.tracerset:main"
