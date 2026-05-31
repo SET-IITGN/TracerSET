@@ -1,6 +1,0 @@
-file = open("tests/program/geek.txt", "r+")
-content = file.read()
-print(content,end='')
-file.write(content.upper())
-file.flush()
-file.close()

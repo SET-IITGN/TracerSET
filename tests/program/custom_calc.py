@@ -1,5 +1,0 @@
-a=input()
-b=input()
-S=input()
-res=eval(a+S+b)
-print(res)
