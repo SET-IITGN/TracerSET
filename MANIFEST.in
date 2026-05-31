@@ -1,0 +1,4 @@
+prune tests
+exclude make.cmd
+exclude Makefile
+exclude pytest.ini

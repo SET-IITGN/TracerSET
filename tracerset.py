@@ -9,6 +9,9 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
+VER='TracerSET 1.1.5'
+TAG='Execution-Centric Program Comprehension Environment for Python'
+
 COLOR = "\033[93m"
 ERROR = "\033[91m"
 SUCCESS = "\033[92m"
@@ -187,16 +190,18 @@ def show_concrete_syntax_tree(filename):
     pause("[Concrete Syntax Tree (CST)]")
     print("===============================")
     pycmd = get_python_cmd()
+    xpath = os.path.join(os.path.dirname(__file__), "utilities", "cst2dot.py")
     os.system(
-        f"{pycmd} utilities/cst2dot.py {filename}"
+        f"{pycmd} {xpath} {filename}"
     )
 
 def show_abstract_syntax_tree(filename):
     pause("[Abstract Syntax Tree (AST)]")
     print("==============================")
     pycmd = get_python_cmd()
+    xpath = os.path.join(os.path.dirname(__file__), "utilities", "ast2dot.py")
     os.system(
-        f"{pycmd} utilities/ast2dot.py {filename}"
+        f"{pycmd} {xpath} {filename}"
     )
 
 def show_disassembly(filename):
@@ -219,8 +224,9 @@ def show_step_by_step_trace(filename):
     pause("[Step-by-step Program Execution]")
     print("=================================")
     pycmd = get_python_cmd()
+    xpath = os.path.join(os.path.dirname(__file__), "utilities", "detailed.py")
     os.system(
-        f"{pycmd} utilities/detailed.py {get_mode()} {filename}"
+        f"{pycmd} {xpath} {get_mode()} {filename}"
     )
 
 def show_ast_dump(parsed_ast):
@@ -239,9 +245,9 @@ def get_mode():
             mode='beginner'
         else:
             print(f'''{COLOR}Usage:
-       python3 tracerset.py beginner <file.py> 
-       python3 tracerset.py intermediate <file.py>
-       python3 tracerset.py advanced <file.py>{RESET}''')
+       tracerset [beginner] <file.py> 
+       tracerset intermediate <file.py>
+       tracerset advanced <file.py>{RESET}''')
             sys.exit(1)
     else:
         mode = sys.argv[1].lower()
@@ -282,6 +288,17 @@ def main():
 
     mode = get_mode()
     filename = sys.argv[len(sys.argv)-1]
+    
+    if filename.lower() in ['-v','-version','--v','--version']:
+        print(f"{VER} - {TAG}")
+        return
+    elif filename.lower() in ['-h','-help','--help','--h']:
+        print(f'''{COLOR}Usage:
+       tracerset [beginner] <file.py> 
+       tracerset intermediate <file.py>
+       tracerset advanced <file.py>{RESET}''')
+        return
+    
     config = MODES[mode]
     show_banner(mode)
 
@@ -334,26 +351,28 @@ def main():
     if config["step_trace"]:
         show_step_by_step_trace(filename)
 
-# ============================================================
-# Exception Handling
-# ============================================================
 
-try:
-    main()
+if __name__ == "__main__":
+    # ============================================================
+    # Exception Handling
+    # ============================================================
 
-except OSError as ex:
-    print(f"{ERROR}File Error:{RESET}")
-    print(f"{ex.filename}: {ex.strerror}")
+    try:
+        main()
 
-except SyntaxError as ex:
-    print(f"{ERROR}Syntax Error:{RESET}")
-    print(
-        f'In File "{sys.argv[1]}", line {ex.lineno}'
-    )
-    print(ex.text)
-    print(
-        f"{ex.__class__.__name__}: {ex.msg}"
-    )
+    except OSError as ex:
+        print(f"{ERROR}File Error:{RESET}")
+        print(f"{ex.filename}: {ex.strerror}")
 
-except KeyboardInterrupt:
-    print(f"\n{ERROR}Execution interrupted by user.{RESET}")
+    except SyntaxError as ex:
+        print(f"{ERROR}Syntax Error:{RESET}")
+        print(
+            f'In File "{sys.argv[1]}", line {ex.lineno}'
+        )
+        print(ex.text)
+        print(
+            f"{ex.__class__.__name__}: {ex.msg}"
+        )
+
+    except KeyboardInterrupt:
+        print(f"\n{ERROR}Execution interrupted by user.{RESET}")

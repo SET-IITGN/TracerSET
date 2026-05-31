@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracerset"
+version = "1.1.5"
+description = "Execution-Centric Program Comprehension Environment for Python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "graphviz",
+    "libcst",
+    "python_ta",
+    "xdot",
+    "pytest",
+    "complexipy"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tracerset*"]
+exclude = ["tests*"]
+
+[project.scripts]
+tracerset = "tracerset.tracerset:main"
