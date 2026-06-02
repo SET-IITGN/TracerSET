@@ -115,6 +115,13 @@ class VariableTracer:
             return False
 
     def is_user_frame(self, filename):
+    
+        xfilename = str(filename)
+
+        # CPython pseudo-files
+        if xfilename.startswith("<frozen") or xfilename.startswith("<frozen "):
+            return False
+    
         filename = os.path.abspath(filename)
 
         # tracer itself
@@ -849,6 +856,9 @@ class VariableTracer:
         
         def get_current_tokens(fname):
             token_line_map = defaultdict(list)
+            
+            if not os.path.isfile(fname):
+                return token_line_map
         
             with open(fname, "r", encoding="utf-8") as f:
                 xsource = f.read()
@@ -862,6 +872,9 @@ class VariableTracer:
         
         def get_current_ast(fname):
             ast_line_map = defaultdict(list)
+            
+            if not os.path.isfile(fname):
+                return ast_line_map
         
             with open(fname, "r", encoding="utf-8") as f:
                 xsource = f.read()
@@ -1338,6 +1351,15 @@ def main():
         pass  # Allow sys.exit()
     except KeyboardInterrupt:
         print("\nExecution interrupted by user")
+    except ModuleNotFoundError as e:
+        print(
+            f"\n{ERROR}ModuleNotFoundError:{RESET} "
+            f"No module named '{e.name}'"
+        )
+        print(
+            f"The library '{e.name}' is not installed "
+            f"in the current Python environment."
+        )    
     except Exception as e:
         print(f"\nExecution error: {type(e).__name__}: {e}")
         traceback.print_exc()
