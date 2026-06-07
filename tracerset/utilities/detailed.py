@@ -141,6 +141,10 @@ class VariableTracer:
         site_dirs = [p for p in sys.path if "site-packages" in p or "dist-packages" in p]
         if any(filename.startswith(p) for p in site_dirs):
             return False
+        
+        #discard tracking files/entities with no ".py" extension    
+        if not filename.endswith('.py'):
+            return False
 
         # finally restrict to project only
         return filename.startswith(self.project_root)

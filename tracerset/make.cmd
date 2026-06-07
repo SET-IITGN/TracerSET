@@ -29,6 +29,11 @@ for /d /r . %%d in (__pycache__) do (
     if exist "%%d" rd /s /q "%%d"
 )
 
+:: Remove all outputs directories
+for /d /r . %%d in (outputs) do (
+    if exist "%%d" rd /s /q "%%d"
+)
+
 :: Remove matching files: .tmp, .svg, .dot, .cov*, .htm*, .gv
 del /f /q *.tmp 2>nul
 del /f /q *.svg 2>nul

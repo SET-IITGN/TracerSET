@@ -43,4 +43,5 @@ test_walrus2.py
 test_with_context.py
 test_worst_case_ast_exec.py
 import_missing_module_test.py
+gas_station.py
 
