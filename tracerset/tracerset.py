@@ -217,7 +217,8 @@ def show_execution_trace(filename):
     print("==========================")
     pycmd = get_python_cmd()
     os.system(
-        f"{pycmd} -m trace --count --trace --missing --coverdir tests --summary {filename}"
+        #f"{pycmd} -m trace --count --trace --missing --coverdir tests --summary {filename}"
+        f"{pycmd} -m trace --count --trace --ignore-dir={os.path.dirname(os.__file__)} --missing --coverdir tests --summary {filename}"
     )
 
 def show_step_by_step_trace(filename):
