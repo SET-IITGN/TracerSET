@@ -372,7 +372,30 @@ class VariableTracer:
                         elif '<class' in value_repr:
                             def transform(v, k):
                                 if 'function' in v:
-                                    return '<function>'
+                                    #return '<function>'
+                                    xret=''
+                                    try:
+                                        xdefaults = v.__defaults__
+                                        if xdefaults:
+                                            xargcount = v.__code__.co_argcount
+                                            xargnames = v.__code__.co_varnames[:xargcount]
+
+                                            xdefault_names = xargnames[-len(xdefaults):]
+
+                                            xdefault_str = ", ".join(
+                                                f"{xn}={repr(xval)}"
+                                                for xn, xval in zip(xdefault_names, xdefaults)
+                                            )
+
+                                            xret = (
+                                                f"<function {v.__name__}"
+                                                f"({xdefault_str})>"
+                                            )
+                                        else:
+                                            xret = f"<function {v.__name__}>"
+                                    except Exception:
+                                        xret = f"<function {v.__name__}>"
+                                    return xret
                                 return v
                             xbuff = value.__name__
                             temp_dict= {
@@ -612,12 +635,14 @@ class VariableTracer:
                     if '<module' in v:
                         return '<module>'
                     if '<function' in v and 'class' not in v:
-                        return '<function>'
+                        return v
+                        #return '<function>'
                 elif not isinstance(v,str):
                     if '<module' in repr(v):
                         return '<module>'
                     if '<function' in repr(v) and 'class' not in repr(v):
-                        return '<function>'
+                        return v
+                        #return '<function>'
                 return v
 
             globals_dict = {
@@ -1193,7 +1218,31 @@ class VariableTracer:
             try:
                 #result[k] = repr(v)
                 if isinstance(v, types.FunctionType):
+                    '''
                     result[k] = f"<function {v.__name__}>" #reduce-noise
+                    '''
+                    try:
+                        defaults = v.__defaults__
+
+                        if defaults:
+                            argcount = v.__code__.co_argcount
+                            argnames = v.__code__.co_varnames[:argcount]
+
+                            default_names = argnames[-len(defaults):]
+
+                            default_str = ", ".join(
+                                f"{n}={repr(val)}"
+                                for n, val in zip(default_names, defaults)
+                            )
+
+                            result[k] = (
+                                f"<function {v.__name__}"
+                                f"({default_str})>"
+                            )
+                        else:
+                            result[k] = f"<function {v.__name__}>"
+                    except Exception:
+                        result[k] = f"<function {v.__name__}>"
                 elif ' object ' in repr(v):
                     #example: <__main__.Animal object at 0x7f339319a590>
                     buff=repr(v).split('__main__.')[1]
@@ -1207,12 +1256,37 @@ class VariableTracer:
                     def transform(vv, kk):
                         if isinstance(vv,str):
                             if 'function' in vv:
-                                return '<function>'
+                                #return '<function>'
+                                return vv
                         elif not isinstance(vv,str):
                             if '<module' in repr(vv):
                                 return '<module>'
                             if '<function' in repr(vv) and 'class' not in repr(vv):
-                                return '<function>'
+                                #return '<function>'
+                                yret=''
+                                try:
+                                    ydefaults = vv.__defaults__
+                                    if ydefaults:
+                                        yargcount = vv.__code__.co_argcount
+                                        yargnames = vv.__code__.co_varnames[:yargcount]
+
+                                        ydefault_names = yargnames[-len(ydefaults):]
+
+                                        ydefault_str = ", ".join(
+                                            f"{yn}={repr(yval)}"
+                                            for yn, yval in zip(ydefault_names, ydefaults)
+                                        )
+
+                                        yret = (
+                                            f"<function {vv.__name__}"
+                                            f"({ydefault_str})>"
+                                        )
+                                    else:
+                                        yret = f"<function {vv.__name__}>"
+                                except Exception:
+                                    yret = f"<function {vv.__name__}>"
+                                return yret
+                                #return vv
                         return vv
                     xbuff = v.__name__
                     temp_dict= {
