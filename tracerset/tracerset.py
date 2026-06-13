@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.1.8'
+VER='TracerSET 1.1.9'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
@@ -302,12 +302,12 @@ def main():
     
     config = MODES[mode]
     show_banner(mode)
-
+    
     # --------------------------------------------------------
     # Read source code
     # --------------------------------------------------------
     buff = read_source_code(filename)
-
+    
     # --------------------------------------------------------
     # Parse AST
     # --------------------------------------------------------
@@ -345,7 +345,7 @@ def main():
     # --------------------------------------------------------
     if config["execution_trace"]:
         show_execution_trace(filename)
-
+    
     # --------------------------------------------------------
     # ALL MODES
     # --------------------------------------------------------

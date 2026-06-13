@@ -1098,7 +1098,8 @@ class VariableTracer:
                         print(f"{indent}│  AST     :")
 
                         root = line_ast_nodes[0]
-
+                        
+                        '''
                         # -------- deterministic DFS (NO ast.walk) --------
                         def iter_children(node):
                             # deterministic: iter_fields preserves definition order
@@ -1124,15 +1125,21 @@ class VariableTracer:
 
                         # -------- deterministic output order --------
                         seen = set()
-
+                        '''
                         def print_tree(node, prefix="", is_last=True, depth=0):
+                            
+                            '''
                             if id(node) in seen:
                                 return
                             seen.add(id(node))
-
+                            
                             if not hasattr(node, "lineno") or node.lineno != line_no:
                                 return
-
+                            '''
+                            
+                            if hasattr(node, "lineno") and node.lineno != line_no:
+                                return
+                            
                             # connector
                             connector = f"{INFO}└──{RESET} " if is_last else f"{INFO}├──{RESET} "
 
@@ -1143,10 +1150,19 @@ class VariableTracer:
                             )
 
                             # prepare children (deterministic order)
+                            '''
                             children = [
                                 c for c in iter_children(node)
                                 if hasattr(c, "lineno") and c.lineno == line_no
                             ]
+                            '''
+                            children=[]
+                            for c in ast.iter_child_nodes(node):
+                                if hasattr(c, "lineno"):
+                                    if c.lineno==line_no:
+                                        children.append(c)
+                                else:
+                                    children.append(c)
 
                             # print children
                             for i, child in enumerate(children):

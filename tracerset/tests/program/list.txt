@@ -45,4 +45,4 @@ test_worst_case_ast_exec.py
 import_missing_module_test.py
 gas_station.py
 test_mutable_default.py
-
+test_lambda.py

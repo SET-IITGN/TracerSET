@@ -81,14 +81,14 @@ def test_tracer_runs(program, program_digest, expected):
             result = subprocess.run(
                 [sys.executable, str(TRACER), str(i), str(program)],
                 capture_output=True,
-                input="\n" * 1000,
+                input="\n" * 5000,
                 text=True,
             )
         else:
             result = subprocess.run(
                 [sys.executable, str(TRACER), str(program)],
                 capture_output=True,
-                input="\n" * 1000,
+                input="\n" * 5000,
                 text=True,
             )
 
