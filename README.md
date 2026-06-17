@@ -71,7 +71,7 @@ TracerSET presents these perspectives in a single environment where:
 - Alias sets (advanced mode)
 - Cognitive complexity score
 - Progressive learning modes:
-  - Beginner
+  - Beginner (default)
   - Intermediate
   - Advanced
 ---
@@ -84,7 +84,7 @@ tracerset intermediate [file.py] #or stdin
 tracerset advanced [file.py] #or stdin
 ```
 
-### ```beginner```
+### ```beginner``` mode
 Focuses on **basic runtime understanding of program execution**.
 
 This mode is designed for first-time programmers to understand how a Python program runs step by step.
@@ -97,7 +97,7 @@ Includes:
 
 At this stage, the learner primarily observes execution flow and control structure. No internal program representations are shown.
 
-### ```intermediate```
+### ```intermediate``` mode
 Focuses on **connecting program structure with runtime execution**.
 
 This mode builds on beginner by introducing structural understanding of the program while still emphasizing execution.
@@ -116,7 +116,7 @@ This stage helps the learner connect:
 
 Tokens, CST, and bytecode are not introduced yet.
 
-### ```advanced```
+### ```advanced``` mode
 Focuses on **full internal representation of programs and execution behavior**.
 
 This mode exposes both compiler-level structure and detailed runtime behavior for deep analysis.
