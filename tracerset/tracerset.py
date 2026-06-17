@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.1.9'
+VER='TracerSET 1.2.0'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
@@ -20,6 +20,8 @@ RESET = "\033[0m"
 MODE_BEGINNER = "beginner"
 MODE_INTERMEDIATE = "intermediate"
 MODE_ADVANCED = "advanced"
+stdin=0
+stdin_m=''
 
 MODES = {
     MODE_BEGINNER: {
@@ -232,9 +234,16 @@ def show_step_by_step_trace(filename):
     print("=================================")
     pycmd = get_python_cmd()
     xpath = os.path.join(os.path.dirname(__file__), "utilities", "detailed.py")
-    os.system(
-        f"{pycmd} {xpath} {get_mode()} {filename}"
-    )
+    global stdin
+    global stdin_m
+    if stdin==0:
+        os.system(
+            f"{pycmd} {xpath} {get_mode()} {filename}"
+        )
+    else:
+        os.system(
+            f"{pycmd} {xpath} {stdin_m} {filename}"
+        )
 
 def show_ast_dump(parsed_ast):
     pause("[AST Hierarchy]")
@@ -246,15 +255,19 @@ def show_ast_dump(parsed_ast):
 # ============================================================
 
 def get_mode():
-
+    global stdin
+    global stdin_m
+    if stdin==1:
+        return stdin_m
+        
     if len(sys.argv) != 3:
         if len(sys.argv) == 2:
             mode='beginner'
         else:
             print(f'''{COLOR}Usage:
-       tracerset [beginner] <file.py> 
-       tracerset intermediate <file.py>
-       tracerset advanced <file.py>{RESET}''')
+       tracerset [beginner] [file.py] #or stdin 
+       tracerset intermediate [file.py] #or stdin
+       tracerset advanced [file.py] #or stdin{RESET}''')
             sys.exit(1)
     else:
         mode = sys.argv[1].lower()
@@ -292,18 +305,61 @@ def show_banner(mode):
 # ============================================================
 
 def main():
-
-    mode = get_mode()
-    filename = sys.argv[len(sys.argv)-1]
+    mode=''
+    filename=''
+    global stdin
+    global stdin_m
+    
+    cmd=[x.lower() for x in sys.argv]
+    cmd_len=len(cmd)
+    if cmd_len==1:
+        if cmd[0] in ['tracerset','tracerset.py']:
+           mode=MODE_BEGINNER
+           stdin_m=mode
+           stdin=1
+    elif cmd_len==2:
+        if cmd[0] in ['tracerset','tracerset.py']:
+           mode=cmd[1]
+           stdin_m=mode
+           if not mode.endswith('.py') and mode not in MODES:
+               if mode.lower() in ['-v','-version','--v','--version']:
+                   print(f"{VER} - {TAG}")
+                   return
+               elif mode.lower() in ['-h','-help','--help','--h']:
+                   print(f'''{COLOR}Usage:
+       tracerset [beginner] [file.py] #or stdin 
+       tracerset intermediate [file.py] #or stdin
+       tracerset advanced [file.py] #or stdin{RESET}''')
+                   return
+               print(f"{ERROR}Invalid mode:{RESET} {mode}")
+               print(f"\nAvailable modes:{COLOR}")
+               for m in MODES:
+                   print(f"{m}")
+               print(f"{RESET}")
+               sys.exit(1)
+           else:
+               if mode.endswith('.py'):
+                   stdin=0
+               else:
+                   stdin=1
+               
+    if stdin==1:
+        filename="tracerset.tmp.py"
+        fp=open(filename,"w")
+        fp.write(sys.stdin.read())
+        fp.close()
+    else:
+        mode = get_mode()
+        filename = sys.argv[len(sys.argv)-1]
     
     if filename.lower() in ['-v','-version','--v','--version']:
         print(f"{VER} - {TAG}")
         return
     elif filename.lower() in ['-h','-help','--help','--h']:
         print(f'''{COLOR}Usage:
-       tracerset [beginner] <file.py> 
-       tracerset intermediate <file.py>
-       tracerset advanced <file.py>{RESET}''')
+       tracerset [beginner] [file.py] #or stdin 
+       tracerset intermediate [file.py] #or stdin
+       tracerset advanced [file.py] #or stdin{RESET}''')
         return
     
     config = MODES[mode]
@@ -357,7 +413,8 @@ def main():
     # --------------------------------------------------------
     if config["step_trace"]:
         show_step_by_step_trace(filename)
-
+    if stdin==1:
+        os.remove('tracerset.tmp.py')    
 
 if __name__ == "__main__":
     # ============================================================
