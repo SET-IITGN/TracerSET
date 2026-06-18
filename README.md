@@ -87,7 +87,7 @@ tracerset advanced [file.py] #or stdin
 ### ```beginner``` mode
 Focuses on **basic runtime understanding of program execution**.
 
-This mode is designed for first-time programmers to understand how a Python program runs step by step.
+This mode (default) is designed for first-time programmers to understand how a Python program runs step by step.
 
 Includes:
 - Source code display
