@@ -91,11 +91,9 @@ This mode is designed for first-time programmers to understand how a Python prog
 
 Includes:
 - Source code display
-- Control Flow Graph (CFG)
 - Step-by-step program execution trace (custom detailed tracer)
-- Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
-At this stage, the learner primarily observes execution flow and control structure. No internal program representations are shown.
+At this stage, the learner primarily observes execution flow. No internal program representations are shown.
 
 ### ```intermediate``` mode
 Focuses on **connecting program structure with runtime execution**.
