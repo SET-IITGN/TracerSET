@@ -167,14 +167,14 @@ def show_control_flow_graph(filename):
         print(src,fname,dest)
         os.system(f"dot -Tpng {src} > {dest}")
         print(f"DOT file written to: {dest}")
-        os.system(f"start {dest}")
+        #os.system(f"start {dest}")
     elif platform.system() == 'Linux':
         fname=filename.split('/')[::-1][0]
         src=fname.replace(".py",".gv")
         dest=filename.replace(".py",".cfg.dot")
         os.system(f"rm -f *.svg; mv {src} {dest}")
         print(f"DOT file written to: {dest}")
-        os.system(f"xdot {dest} 2> /dev/null")
+        #os.system(f"xdot {dest} 2> /dev/null")
     else:
         print("Platform not supported yet!")
         exit(-1)
@@ -373,7 +373,8 @@ def main():
     # --------------------------------------------------------
     # Parse AST
     # --------------------------------------------------------
-    parsed = ast.parse(buff)
+    if mode != MODE_BEGINNER:
+        parsed = ast.parse(buff)
 
     # --------------------------------------------------------
     # Always show source code
@@ -383,12 +384,14 @@ def main():
     # -----------------------------
     # Cognitive Complexity Layer
     # -----------------------------
-    show_cognitive_complexity(filename)
+    if mode != MODE_BEGINNER:
+        show_cognitive_complexity(filename)
     
     # --------------------------------------------------------
     # Always show control flow graph
     # --------------------------------------------------------
-    cfg_iterator(filename)
+    if mode != MODE_BEGINNER:
+        cfg_iterator(filename)
 
     # --------------------------------------------------------
     # ADVANCED MODE
