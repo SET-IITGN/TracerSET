@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.2.0'
+VER='TracerSET 1.2.1'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
@@ -176,8 +176,9 @@ def show_control_flow_graph(filename):
         print(f"DOT file written to: {dest}")
         #os.system(f"xdot {dest} 2> /dev/null")
     else:
-        print("Platform not supported yet!")
-        exit(-1)
+        #print("Platform not supported yet!")
+        #exit(-1)
+        pass
 
 def cfg_iterator(filename):
     pause("[Control Flow Graph (CFG)]")
@@ -313,12 +314,12 @@ def main():
     cmd=[x.lower() for x in sys.argv]
     cmd_len=len(cmd)
     if cmd_len==1:
-        if cmd[0] in ['tracerset','tracerset.py']:
+        if cmd[0] in ['tracerset','tracerset.py'] or cmd[0].endswith(('tracerset','tracerset.py')):
            mode=MODE_BEGINNER
            stdin_m=mode
            stdin=1
     elif cmd_len==2:
-        if cmd[0] in ['tracerset','tracerset.py']:
+        if cmd[0] in ['tracerset','tracerset.py'] or cmd[0].endswith(('tracerset','tracerset.py')):
            mode=cmd[1]
            stdin_m=mode
            if not mode.endswith('.py') and mode not in MODES:

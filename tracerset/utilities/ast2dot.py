@@ -141,7 +141,8 @@ if __name__ == "__main__":
         print(f"DOT file written to: {output_file}")
         #os.system(f"xdot {output_file} 2> /dev/null")
     else:
-        print("Platform not supported yet!")
-        exit(-1)
+        #print("Platform not supported yet!")
+        #exit(-1)
+        pass
     
     

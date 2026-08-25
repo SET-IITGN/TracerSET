@@ -1,4 +1,4 @@
-# TracerSET v1.2.0
+# TracerSET v1.2.1
 
 **Execution-Centric Program Comprehension Environment for Python**
 
@@ -7,9 +7,9 @@ TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_com
 ---
 ## System Requirements
 - Python >=3.10
-- Linux / Windows
-- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.0/tracerset-1.2.0-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.0-py3-none-any.whl```
-- Uninstall using ```pip3 uninstall tracerset-1.2.0-py3-none-any.whl```
+- Linux / Windows/ Mac
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.1/tracerset-1.2.1-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.1-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.2.1-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
@@ -78,10 +78,10 @@ TracerSET presents these perspectives in a single environment where:
 
 ## Usage
 ```
-tracerset [file.py] #or stdin, mode defaults to beginner
-tracerset beginner [file.py] #or stdin
-tracerset intermediate [file.py] #or stdin
-tracerset advanced [file.py] #or stdin
+tracerset [file.py] #reads from terminal (stdin) if no file provided, mode defaults to beginner if no mode provided
+tracerset beginner [file.py] #reads from terminal (stdin) if no file provided
+tracerset intermediate [file.py] #reads from terminal (stdin) if no file provided
+tracerset advanced [file.py] #reads from terminal (stdin) if no file provided
 ```
 
 ### ```beginner``` mode
