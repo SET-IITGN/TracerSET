@@ -1,4 +1,4 @@
-# TracerSET v1.2.2
+# TracerSET v1.2.3
 
 **Execution-Centric Program Comprehension Environment for Python**
 
@@ -9,8 +9,8 @@ It provides token, syntax-tree, control-flow, cognitive-complexity, and bytecode
 ## System Requirements
 - Python >=3.10
 - - Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform.
-- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.2/tracerset-1.2.2-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.2-py3-none-any.whl```
-- Uninstall using ```pip3 uninstall tracerset-1.2.2-py3-none-any.whl```
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.3/tracerset-1.2.3-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.3-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.2.3-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
