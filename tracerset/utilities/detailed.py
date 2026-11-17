@@ -708,20 +708,21 @@ class VariableTracer:
             return alias_sets
             '''
             object_groups = {}
-
-            # ---------- LOCALS ----------
-            for name, value in frame.f_locals.items():
-                #if name.startswith("__"):
-                if name not in self.user_vars:
-                    continue
-                if isinstance(value, types.ModuleType):
-                    continue
-                if isinstance(value, types.FunctionType):
-                    continue
-                oid = id(value)
-                if oid not in object_groups:
-                    object_groups[oid] = set()
-                object_groups[oid].add(f"L.{name}")
+            
+            if frame.f_locals is not frame.f_globals:
+                # ---------- LOCALS ----------
+                for name, value in frame.f_locals.items():
+                    #if name.startswith("__"):
+                    if name not in self.user_vars:
+                        continue
+                    if isinstance(value, types.ModuleType):
+                        continue
+                    if isinstance(value, types.FunctionType):
+                        continue
+                    oid = id(value)
+                    if oid not in object_groups:
+                        object_groups[oid] = set()
+                    object_groups[oid].add(f"L.{name}")
 
             # ---------- GLOBALS ----------
             for name, value in frame.f_globals.items():
@@ -1404,7 +1405,7 @@ def main():
     if not user_vars:
         print("No user variables found (only built-ins used)")
         print("   This is normal for scripts that only use built-in functions.")
-        return
+        #return
     
     print(f"Found {len(user_vars)} user variable(s):")
     print(f"   {', '.join(sorted(user_vars))}")
