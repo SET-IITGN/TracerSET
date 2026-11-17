@@ -8,7 +8,7 @@ It provides token, syntax-tree, control-flow, cognitive-complexity, and bytecode
 ---
 ## System Requirements
 - Python >=3.10
-- - Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform.
+- Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform.
 - Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.3/tracerset-1.2.3-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.3-py3-none-any.whl```
 - Uninstall using ```pip3 uninstall tracerset-1.2.3-py3-none-any.whl```
 
@@ -51,9 +51,9 @@ Program understanding typically relies on separate tools and views:
 - Execution tracing tools
 
 TracerSET presents these perspectives in a single environment where:
-- structural analyses and representations are presented before traced execution
-- runtime behavior is inspected through tracing events
-- selected token, AST, and bytecode information is associated with traced source lines
+- Structural analyses and representations are presented before traced execution
+- Runtime behavior is inspected through tracing events
+- Selected token, AST, and bytecode information is associated with traced source lines
 ---
 
 ## Features
@@ -96,7 +96,6 @@ differ between runs. Interactive pauses are enabled when standard input is a ter
 Focuses on **basic runtime understanding of program execution**.
 
 This mode (default) is designed for first-time programmers to understand how a Python program runs step by step.
-
 Includes:
 - Source code display and highlighting
 - Step-by-step execution-event display
@@ -110,7 +109,6 @@ At this stage, the learner primarily observes execution flow. Token, syntax-tree
 Focuses on **connecting program structure with runtime execution**.
 
 This mode builds on beginner by introducing structural understanding of the program while still emphasizing execution.
-
 Includes:
 - Source code display
 - Control Flow Graph (CFG)
@@ -129,7 +127,6 @@ Tokens, CST, and bytecode are not introduced yet.
 Focuses on **detailed structural representations and runtime behavior**.
 
 This mode exposes both compiler-level structure and detailed runtime behavior for deep analysis.
-
 Includes:
 - Source code display
 - Control Flow Graph (CFG)
@@ -170,13 +167,11 @@ This mode brings together complementary perspectives on:
 TracerSET organizes program comprehension around three complementary
 kinds of information:
 
-1. Structural context:
+- Structural context:
    tokens, CST, AST, CFG, cognitive complexity, and bytecode disassembly
-
-2. Runtime observations:
+- Runtime observations:
    execution events, stack context, variable bindings, return values, and exceptions
-
-3. Execution-associated representations:
+- Execution-associated representations:
    selected token, AST, and bytecode information mapped to traced source lines
 
 Alias sets are derived from object identity among selected bindings in the inspected frame's local and global namespaces.
