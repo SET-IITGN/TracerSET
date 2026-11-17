@@ -166,12 +166,9 @@ This mode brings together complementary perspectives on:
 TracerSET organizes program comprehension around three complementary
 kinds of information:
 
-- Structural context:
-   tokens, CST, AST, CFG, cognitive complexity, and bytecode disassembly
-- Runtime observations:
-   execution events, stack context, variable bindings, return values, and exceptions
-- Execution-associated representations:
-   selected token, AST, and bytecode information mapped to traced source lines
+- **Structural context**: tokens, CST, AST, CFG, cognitive complexity, and bytecode disassembly
+- **Runtime observations**: execution events, stack context, variable bindings, return values, and exceptions
+- **Execution-associated representations**: selected token, AST, and bytecode information mapped to traced source lines
 
 Alias sets are derived from object identity among selected bindings in the inspected frame's local and global namespaces.
 
