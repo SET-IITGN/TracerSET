@@ -116,8 +116,8 @@ Includes:
 - Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This stage helps the learner connect:
-- how the program is structured (AST)
-- how the program executes (trace + step-by-step execution)
+- How the program is structured (AST)
+- How the program executes (trace + step-by-step execution)
 
 Tokens, CST, and bytecode are not introduced yet.
 
