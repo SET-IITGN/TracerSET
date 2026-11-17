@@ -58,7 +58,6 @@ TracerSET presents these perspectives in a single environment where:
 ## Features
 - Step-by-step execution tracing of Python programs
 - Runtime stack visualization
-- Local and global variable inspection
 - Local and global binding inspection at runtime tracing events
 - At displayed line events, variable state is inspected before execution associated with the reported source line
 - Advanced-mode alias sets grouping selected local and global bindings that refer to the same object
