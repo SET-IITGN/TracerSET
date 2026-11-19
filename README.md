@@ -1,15 +1,18 @@
-# TracerSET v1.2.4
+# TracerSET v1.2.5
 
 **Execution-Centric Program Comprehension Environment for Python**
 
 TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_comprehension) environment for Python that combines complementary structural representations with runtime execution inspection. It provides token, syntax-tree, control-flow, cognitive-complexity, and bytecode views alongside step-by-step execution tracing. Selected token, AST, and bytecode views are associated with traced source lines, helping users explore relationships between program structure and concrete execution behavior. These associations do not imply that every displayed structural element was evaluated during that execution step.
 
+- [https://github.com/SET-IITGN/TracerSET](https://github.com/SET-IITGN/TracerSET)
+- [https://pypi.org/project/tracerset](https://pypi.org/project/tracerset)
+
 ---
 ## System Requirements
 - Python >=3.10
 - Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform
-- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.4/tracerset-1.2.4-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.4-py3-none-any.whl```
-- Uninstall using ```pip3 uninstall tracerset-1.2.4-py3-none-any.whl```
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.5/tracerset-1.2.5-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.5-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.2.5-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
@@ -30,7 +33,6 @@ complexipy
   - [Beginner](#beginner-mode)
   - [Intermediate](#intermediate-mode)
   - [Advanced](#advanced-mode)
-- [Screenshots](#screenshots)
 - [Video Demonstrations](#video-demonstrations)
 - [System Requirements](#system-requirements)
 - [Design Philosophy](#design-philosophy)
@@ -239,12 +241,6 @@ This mode brings together complementary perspectives on:
 - Selected AST fragments associated with traced source lines
 - Bytecode instructions associated with traced source lines in the current code object
 - Alias sets for selected direct local/global bindings
-
----
-
-## Screenshots
-**Version 1.0.2**
-<img width="1920" height="867" alt="TracerSET Screenshot" src="https://github.com/user-attachments/assets/5f844c58-260c-43d5-b75c-43dd4f446dc3" />
 
 ---
 

@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.2.4'
+VER='TracerSET 1.2.5'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
