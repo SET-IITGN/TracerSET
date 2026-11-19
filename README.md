@@ -131,7 +131,7 @@ Depending on the event, recorded information includes:
 - Event sequence number and elapsed time
 - Source filename, line number, and function name
 - Source-line text and runtime stack context
-- Bounded snapshots of filtered local and global display values
+- Snapshots of filtered local and global display values without recorder-defined truncation limits
 - Binding identities and alias information
 - Return values or exception information
 
@@ -161,7 +161,8 @@ Beginner and intermediate runs leave an existing recording untouched.
 
 ### Recording Limits and Precautions
 
-- Variable snapshots are bounded; large or deeply nested values may be truncated.
+- The recorder imposes no fixed limits on snapshot depth, container size, string length, integer size, or binding count. Python runtime limits and available memory, disk space, and serialization capacity still apply; very large or deeply nested values may cause recording failures.
+- Circular references are marked rather than expanded indefinitely. Arbitrary objects remain represented by type and identity rather than unrestricted attribute traversal.
 - Object identities are process-local and may be reused after object destruction.
 - Recording adds snapshotting and file-I/O overhead.
 - Large executions may produce substantial output files.
