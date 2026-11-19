@@ -88,7 +88,7 @@ In advanced mode, TracerSET automatically records events from its detailed trace
 No environment variables or additional command-line options are required:
 
 ```bash
-python3 tracerset.py advanced factorial.py
+tracerset advanced factorial.py
 ```
 
 The recording is created in the same directory as the target source file:
