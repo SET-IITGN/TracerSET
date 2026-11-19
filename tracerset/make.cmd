@@ -34,9 +34,10 @@ for /d /r . %%d in (outputs) do (
     if exist "%%d" rd /s /q "%%d"
 )
 
-:: Remove matching files: .tmp, .svg, .dot, .cov*, .htm*, .gv
+:: Remove matching files: .tmp, .svg, .dot, .cov*, .htm*, .gv, .json*
 del /f /q *.tmp 2>nul
 del /f /q *.svg 2>nul
+del /f /q *.json* 2>nul
 del /f /q *.dot 2>nul
 del /f /q *.gv 2>nul
 del /f /q *.cov* 2>nul
@@ -45,7 +46,7 @@ del /f /q *.html 2>nul
 del /f /q *.png 2>nul
 
 :: Also search subdirectories for temp files
-for /r . %%f in (*.tmp *.svg *.dot *.gv *.cov* *.htm *.html *.png) do (
+for /r . %%f in (*.tmp *.svg *.dot *.gv *.cov* *.htm *.html *.png *.json*) do (
     if exist "%%f" del /f /q "%%f"
 )
 

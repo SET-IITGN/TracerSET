@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.2.3'
+VER='TracerSET 1.2.4'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
@@ -144,7 +144,8 @@ def show_cognitive_complexity(filename):
     print("Analyzing files:")
     for f in files:
         print(" -", f)
-    cmd = "complexipy -cs -C no --suggest-refactors " + " ".join(files)
+    #cmd = "complexipy -cs -C no --suggest-refactors " + " ".join(files)
+    cmd = "complexipy -s desc -C no --suggest-refactors " + " ".join(files)
     os.system(cmd)
     
 def show_control_flow_graph(filename):

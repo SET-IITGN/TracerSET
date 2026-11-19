@@ -1,4 +1,4 @@
-# TracerSET v1.2.3
+# TracerSET v1.2.4
 
 **Execution-Centric Program Comprehension Environment for Python**
 
@@ -8,8 +8,8 @@ TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_com
 ## System Requirements
 - Python >=3.10
 - Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform
-- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.3/tracerset-1.2.3-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.3-py3-none-any.whl```
-- Uninstall using ```pip3 uninstall tracerset-1.2.3-py3-none-any.whl```
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.4/tracerset-1.2.4-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.4-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.2.4-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
@@ -25,6 +25,7 @@ complexipy
 ## Table of Contents
 - [Key Idea](#key-idea)
 - [Features](#features)
+- [Automatic JSON Recording](#automatic-json-recording)
 - [Usage](#usage)
   - [Beginner](#beginner)
   - [Intermediate](#intermediate)
@@ -71,10 +72,102 @@ TracerSET presents these perspectives in a single environment where:
 - Execution tracing via Python `trace` module
 - Alias sets (advanced mode)
 - Cognitive complexity score
+- Automatic advanced-mode JSON recording of TracerSET events alongside the existing terminal display
 - Progressive learning modes:
   - Beginner (default)
   - Intermediate
   - Advanced
+---
+
+## Automatic JSON Recording
+
+In advanced mode, TracerSET automatically records events from its detailed trace in a JSON file while preserving the existing terminal display and interactive stepping.
+
+### Invocation and Output Location
+
+No environment variables or additional command-line options are required:
+
+```bash
+python3 tracerset.py advanced factorial.py
+```
+
+The recording is created in the same directory as the target source file:
+
+```text
+factorial.py
+factorial-tracerset.json
+```
+
+For a target such as `examples/factorial.py`, the recording is written to
+`examples/factorial-tracerset.json`.
+
+The output filename follows the pattern `<source-stem>-tracerset.json`.
+
+### Recording Scope
+
+- Recording is enabled only in advanced mode.
+- Only events from TracerSET's detailed trace are recorded.
+- Built-in Python `trace` output is not included.
+- Earlier structural-analysis output and target stdout/stderr are not captured.
+- Terminal displays, colors, and interactive pauses remain available.
+- Beginner and intermediate modes do not create or update the JSON file.
+
+The recording represents the TracerSET execution only. Intermediate and advanced modes still perform the separate executions described under Execution Behavior.
+
+### Recorded Information
+
+The JSON contains run metadata, an ordered event list, and a recording
+summary.
+
+Recorded TracerSET event types are:
+- Function calls
+- Source-line events
+- Return events
+- Exception events
+
+Depending on the event, recorded information includes:
+- Event sequence number and elapsed time
+- Source filename, line number, and function name
+- Source-line text and runtime stack context
+- Bounded snapshots of filtered local and global display values
+- Binding identities and alias information
+- Return values or exception information
+
+Advanced source-line events additionally include:
+- Source-associated token information
+- Selected AST fragments
+- Source-associated bytecode instructions
+
+These structural associations do not establish that every displayed
+element or bytecode instruction executed during that event.
+
+The JSON is a structured event export, not a verbatim terminal transcript.
+Some variable values have already been transformed by the terminal-display
+logic. Arbitrary objects may be represented by type and identity rather
+than complete object contents.
+
+### Repeated Runs and Overwriting
+
+Each advanced-mode run replaces the previous JSON recording for the same
+target source file. Events are not appended across runs.
+
+The previous contents are erased when the recorder opens the destination.
+Copy or rename a recording before another advanced-mode run if it must
+be retained.
+
+Beginner and intermediate runs leave an existing recording untouched.
+
+### Recording Limits and Precautions
+
+- Variable snapshots are bounded; large or deeply nested values may be truncated.
+- Object identities are process-local and may be reused after object destruction.
+- Recording adds snapshotting and file-I/O overhead.
+- Large executions may produce substantial output files.
+- The target directory must be writable for automatic recording to succeed.
+- An interrupted process or write failure may leave incomplete JSON.
+- Recorder finalization does not, by itself, establish target-program success.
+- Recordings may contain sensitive program data and should be handled accordingly.
+
 ---
 
 ## Usage
@@ -87,7 +180,7 @@ tracerset advanced [file.py] #reads from terminal (stdin) if no file provided
 
 ### Execution Behavior
 
-Beginner mode runs the target through the custom detailed tracer. Intermediate and advanced modes run the target separately through Python's `trace` module and then through the custom detailed tracer. These are separate executions, not two views of one recorded run. Programs may request input or produce side effects more than once. Randomness, time-dependent values, files, and other external state may
+Beginner mode runs the target through the TracerSET's trace. Intermediate and advanced modes run the target separately through Python's `trace` module and then through the TracerSET's trace. These are separate executions, not two views of one recorded run. Programs may request input or produce side effects more than once. Randomness, time-dependent values, files, and other external state may
 differ between runs. Interactive pauses are enabled when standard input is a terminal. When source is supplied through stdin, input is read until EOF.
 
 ### ```beginner``` mode
@@ -112,7 +205,7 @@ Includes:
 - Control Flow Graph (CFG)
 - Abstract Syntax Tree (AST) visualization
 - Program execution trace (Python trace module output)
-- Step-by-step program execution trace (custom detailed tracer)
+- Step-by-step program execution trace (TracerSET)
 - Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This stage helps the learner connect:
@@ -136,8 +229,9 @@ Includes:
 - Whole-program Python bytecode disassembly
 - Execution-aligned VM instruction visualization
 - Program execution trace (Python trace module output)
-- Step-by-step program execution trace (custom detailed tracer)
+- Step-by-step program execution trace (TracerSET)
 - Execution-aligned Alias sets (ALIAS)
+- Automatic JSON recording of TracerSET events to `<source-stem>-tracerset.json` beside the target source file
 - Cognitive complexity analysis (function-level complexity metrics via external analyzers)
 
 This mode brings together complementary perspectives on:
@@ -212,8 +306,9 @@ In this documentation, whole-input views refer to analysis of the supplied sourc
 - Token alignment uses token starting lines. AST alignment uses node starting lines and displays selected fragments. Multiple statements on one line, multiline constructs, and nested code objects can limit correspondence.
 - Alias sets cover selected direct bindings in the current frame's local and global namespaces. They do not recursively enumerate references through containers, attributes, or all other frames.
 - Object inspection and formatting may invoke user-defined representation or attribute-access behavior. Tracing and inspection are not guaranteed to be observationally neutral.
-- The detailed tracer executes the target within a constructed execution environment. It does not reproduce every aspect of direct script execution, including target-specific command-line argument handling.
-- Current output consists of terminal displays and generated analysis artifacts. A structured JSON/JSONL execution-event export is not provided.
+- TracerSET executes the target within a constructed execution environment. It does not reproduce every aspect of direct script execution, including target-specific command-line argument handling.
+- Current output consists of terminal displays and generated analysis artifacts. Advanced mode now provides structured JSON export of TracerSET events. JSONL export is not currently provided.
+
 ---
 
 ## Responsible Use Notice

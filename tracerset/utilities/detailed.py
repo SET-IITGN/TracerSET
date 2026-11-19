@@ -9,6 +9,7 @@ import io
 import tokenize
 from collections import defaultdict
 import ast
+from event_recorder import EventRecorder
 
 COLOR = "\033[93m"
 ERROR = "\033[91m"
@@ -66,6 +67,7 @@ class VariableTracer:
             
         self.project_root = os.path.dirname(os.path.abspath(self.script_path))
         self.tracer_file = os.path.abspath(__file__)
+        self.recorder = EventRecorder()
     
     def cleanup(self):
         """Restore original sys.path."""
@@ -965,6 +967,20 @@ class VariableTracer:
                 globals_dict, locals_dict = get_filtered_vars(frame)
                 alias_sets = get_alias_sets(frame)
                 
+                if self.recorder.stream is not None:
+                    self.recorder.record(
+                        'call',
+                        frame,
+                        depth=call_depth,
+                        stack=get_stack(frame),
+                        locals_view=locals_dict,
+                        globals_view=globals_dict,
+                        aliases=alias_sets,
+                        signature=call_signatures.get(id(frame)),
+                        arg=arg,
+                        advanced=(MODE == MODE_ADVANCED),
+                    )                
+                
                 '''
                 print(f"{indent}│  LOCALS   : {locals_dict}")
                 print(f"{indent}│  GLOBALS  : {globals_dict}")
@@ -999,6 +1015,20 @@ class VariableTracer:
                 '''
                 globals_dict, locals_dict = get_filtered_vars(frame)
                 alias_sets = get_alias_sets(frame)
+                
+                if self.recorder.stream is not None:
+                    self.recorder.record(
+                        'return',
+                        frame,
+                        depth=call_depth,
+                        stack=get_stack(frame),
+                        locals_view=locals_dict,
+                        globals_view=globals_dict,
+                        aliases=alias_sets,
+                        signature=call_signatures.get(id(frame)),
+                        arg=arg,
+                        advanced=(MODE == MODE_ADVANCED),
+                    )                
                 
                 print(f"{indent}│   <---program state immediately before RETurning--->")
                 print(f"{indent}│   LOCALS   : {locals_dict}")
@@ -1041,6 +1071,15 @@ class VariableTracer:
                 indent = "│   " * call_depth
 
                 exc_type, exc_value, exc_tb = arg
+                
+                if self.recorder.stream is not None:
+                    self.recorder.record(
+                        'exception',
+                        frame,
+                        depth=call_depth,
+                        stack=get_stack(frame),
+                        arg=arg,
+                    )                
 
                 print(f"{indent}│   {ERROR}EXCEPTION RAISED!{RESET}")
                 print(f"{indent}│   Type  : {ERROR}{exc_type.__name__}{RESET}")
@@ -1076,6 +1115,25 @@ class VariableTracer:
                 globals_dict, locals_dict = get_filtered_vars(frame)
                 alias_sets = get_alias_sets(frame)
                 line_instructions = get_line_instructions(frame,line_no)
+                
+                if self.recorder.stream is not None:
+                    self.recorder.record(
+                        'line',
+                        frame,
+                        depth=call_depth,
+                        stack=get_stack(frame),
+                        locals_view=locals_dict,
+                        globals_view=globals_dict,
+                        aliases=alias_sets,
+                        advanced=(MODE == MODE_ADVANCED),
+                        tokens=token_line_map.get(line_no, []),
+                        ast_root=next(
+                            iter(ast_line_map.get(line_no, [])),
+                            None,
+                        ),
+                        instructions=line_instructions,
+                    )
+
                 self.print_code_file(filename, line_no)
                 
                 '''
@@ -1427,9 +1485,14 @@ def main():
             source = f.read()
         
         code = compile(source, script_path, 'exec')
-        
+
+        tracer.recorder = EventRecorder.for_script(
+            script_path,
+            MODE,
+        )
+
         # Install tracer
-        sys.settrace(tracer.create_tracer())
+        sys.settrace(tracer.create_tracer())        
         
         clear_screen()
         print("Starting execution with tracing...")
@@ -1461,6 +1524,7 @@ def main():
     finally:
         sys.settrace(None)
         tracer.cleanup()
+        tracer.recorder.close()
     
 if __name__ == "__main__":
     main()
