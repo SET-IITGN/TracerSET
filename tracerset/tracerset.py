@@ -9,7 +9,7 @@ import platform
 # Execution-Centric Program Comprehension Environment for Python
 # ===============================================================
 
-VER='TracerSET 1.2.5'
+VER='TracerSET 1.2.6'
 TAG='Execution-Centric Program Comprehension Environment for Python'
 
 COLOR = "\033[93m"
@@ -57,7 +57,7 @@ MODES = {
 # ============================================================
 
 def pause(section_name):
-    if sys.stdin.isatty():
+    if sys.stdin.isatty() and sys.stdout.isatty():
         print(f"\n{COLOR}Press Enter key to continue to {section_name}{RESET}")
         sys.stdin.read(1)
         rows = os.get_terminal_size().lines
@@ -71,7 +71,7 @@ def get_python_cmd():
     return f"python{'.'.join(platform.python_version().split('.')[:2])}"
 
 def read_source_code(filename):
-    with open(filename, "r") as fp:
+    with open(filename, "r", encoding="utf-8") as fp:
         return fp.read()
 
 # ============================================================
@@ -120,7 +120,7 @@ def collect_all_python_files(entry_file):
         with open(current, "r", encoding="utf-8") as f:
             source = f.read()
 
-        tree = ast.parse(source)
+        tree = ast.parse(source, current)
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -163,16 +163,20 @@ def show_control_flow_graph(filename):
             fname=filename.split('\\')[::-1][0]
         else:
             fname=filename.split('/')[::-1][0]
-        src=fname.replace(".py",".gv")
-        dest=filename.replace(".py",".cfg.png")
+        #src=fname.replace(".py",".gv")
+        #dest=filename.replace(".py",".cfg.png")
+        src=os.path.splitext(fname)[0]+".gv"
+        dest=os.path.splitext(filename)[0]+".cfg.png"
         print(src,fname,dest)
         os.system(f"dot -Tpng {src} > {dest}")
         print(f"DOT file written to: {dest}")
         #os.system(f"start {dest}")
     elif platform.system() == 'Linux':
         fname=filename.split('/')[::-1][0]
-        src=fname.replace(".py",".gv")
-        dest=filename.replace(".py",".cfg.dot")
+        #src=fname.replace(".py",".gv")
+        #dest=filename.replace(".py",".cfg.dot")
+        src=os.path.splitext(fname)[0]+".gv"
+        dest=os.path.splitext(filename)[0]+".cfg.dot"
         os.system(f"rm -f *.svg; mv {src} {dest}")
         print(f"DOT file written to: {dest}")
         #os.system(f"xdot {dest} 2> /dev/null")
@@ -307,6 +311,12 @@ def show_banner(mode):
 # ============================================================
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+        
+    #if sys.executable:
+    #    os.environ["PATH"] = os.path.dirname(sys.executable) + os.pathsep + os.environ.get("PATH", "")
+        
     mode=''
     filename=''
     global stdin
@@ -347,7 +357,7 @@ def main():
                
     if stdin==1:
         filename="tracerset.tmp.py"
-        fp=open(filename,"w")
+        fp=open(filename,"w", encoding="utf-8")
         fp.write(sys.stdin.read())
         fp.close()
     else:
@@ -376,7 +386,7 @@ def main():
     # Parse AST
     # --------------------------------------------------------
     if mode != MODE_BEGINNER:
-        parsed = ast.parse(buff)
+        parsed = ast.parse(buff, filename)
 
     # --------------------------------------------------------
     # Always show source code
@@ -421,7 +431,7 @@ def main():
     if stdin==1:
         os.remove('tracerset.tmp.py')    
 
-if __name__ == "__main__":
+def cli():
     # ============================================================
     # Exception Handling
     # ============================================================
@@ -436,7 +446,7 @@ if __name__ == "__main__":
     except SyntaxError as ex:
         print(f"{ERROR}Syntax Error:{RESET}")
         print(
-            f'In File "{sys.argv[1]}", line {ex.lineno}'
+            f'In File "{ex.filename}", line {ex.lineno}'
         )
         print(ex.text)
         print(
@@ -445,3 +455,7 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         print(f"\n{ERROR}Execution interrupted by user.{RESET}")
+        
+if __name__ == "__main__":
+    cli()    
+

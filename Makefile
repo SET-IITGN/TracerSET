@@ -1,2 +1,2 @@
 clean:
-	rm -rf dist tracerset.egg-info
+	rm -rf build dist tracerset.egg-info

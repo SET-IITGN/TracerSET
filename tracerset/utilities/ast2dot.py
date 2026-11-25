@@ -128,7 +128,8 @@ if __name__ == "__main__":
         source = f.read()
     generator = ASTDotGenerator()
     dot_output = generator.generate(filename)
-    output_file = filename.replace(".py", ".ast.dot")
+    #output_file = filename.replace(".py", ".ast.dot")
+    output_file = os.path.splitext(filename)[0] + ".ast.dot"
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(dot_output)

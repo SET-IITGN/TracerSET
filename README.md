@@ -1,4 +1,4 @@
-# TracerSET v1.2.5
+# TracerSET v1.2.6
 
 **Execution-Centric Program Comprehension Environment for Python**
 
@@ -11,8 +11,8 @@ TracerSET is a [program comprehension](https://en.wikipedia.org/wiki/Program_com
 ## System Requirements
 - Python >=3.10
 - Linux, Windows, and macOS; visualization and artifact-opening behavior  varies by platform
-- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.5/tracerset-1.2.5-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.5-py3-none-any.whl```
-- Uninstall using ```pip3 uninstall tracerset-1.2.5-py3-none-any.whl```
+- Download from [here](https://github.com/SET-IITGN/TracerSET/releases/download/v1.2.6/tracerset-1.2.6-py3-none-any.whl), and Install using ```pip3 install tracerset-1.2.6-py3-none-any.whl```
+- Uninstall using ```pip3 uninstall tracerset-1.2.6-py3-none-any.whl```
 
 ### Other dependencies
 (non-exhaustive)
@@ -179,12 +179,13 @@ tracerset [file.py] #reads from terminal (stdin) if no file provided, mode defau
 tracerset beginner [file.py] #reads from terminal (stdin) if no file provided
 tracerset intermediate [file.py] #reads from terminal (stdin) if no file provided
 tracerset advanced [file.py] #reads from terminal (stdin) if no file provided
+tracerset -v            #prints the version
+tracerset -h            #prints help
 ```
 
 ### Execution Behavior
 
-Beginner mode runs the target through the TracerSET's trace. Intermediate and advanced modes run the target separately through Python's `trace` module and then through the TracerSET's trace. These are separate executions, not two views of one recorded run. Programs may request input or produce side effects more than once. Randomness, time-dependent values, files, and other external state may
-differ between runs. Interactive pauses are enabled when standard input is a terminal. When source is supplied through stdin, input is read until EOF.
+Beginner mode runs the target through the TracerSET's trace. Intermediate and advanced modes run the target separately through Python's `trace` module and then through the TracerSET's trace. These are separate executions, not two views of one recorded run. Programs may request input or produce side effects more than once. Input piped to the target is consumed by the first execution. Randomness, time-dependent values, files, and other external state may differ between runs. Interactive pauses are enabled when standard input and standard output are terminals. When source is supplied through stdin, input is read until EOF. 
 
 ### ```beginner``` mode
 Focuses on **basic runtime understanding of program execution**.
@@ -295,16 +296,17 @@ In this documentation, whole-input views refer to analysis of the supplied sourc
 - A single source line may map to multiple VM instructions, and mappings are interpreter-dependent.
 - Execution-aligned views are driven by Python tracing events and source-line mappings. Multi-line expressions, comprehensions, generator expressions, lambdas, and other compiler-generated constructs may produce execution events that do not correspond to complete source-level statements, reflecting the behavior of the underlying Python interpreter.
 - Dynamic features such as `exec`, `eval`, metaprogramming, and runtime code generation may reduce trace precision.
-- Advanced concurrency features (threads, multiprocessing, async execution) are not fully supported; tracing is limited to the currently executing Python thread and frame context, without coverage of inter-process execution or event-loop-level scheduling.
+- Advanced concurrency features (threads, multiprocessing, async execution) are not fully supported; tracing is limited to the main thread and frame context, without coverage of inter-process execution or event-loop-level scheduling.
 - Not intended as a replacement for production-grade debuggers or profilers.
-- Some visualization features depend on external tools such as Graphviz and xdot.
+- CFG, AST and CST views are written as .dot files. Graphviz is required to generate them, and on Windows the CFG is also rendered to PNG. xdot is not launched automatically.
+- CFG generation does not model finally blocks or async def, and has no handling for syntax that exists only in Python 3.15.
 - Cognitive complexity analysis relies on external tooling and may vary across tool versions and environments.
 - Different views may cover different file sets. Local-import discovery is limited and does not implement complete Python package/import resolution.
 - Token alignment uses token starting lines. AST alignment uses node starting lines and displays selected fragments. Multiple statements on one line, multiline constructs, and nested code objects can limit correspondence.
 - Alias sets cover selected direct bindings in the current frame's local and global namespaces. They do not recursively enumerate references through containers, attributes, or all other frames.
 - Object inspection and formatting may invoke user-defined representation or attribute-access behavior. Tracing and inspection are not guaranteed to be observationally neutral.
 - TracerSET executes the target within a constructed execution environment. It does not reproduce every aspect of direct script execution, including target-specific command-line argument handling.
-- Current output consists of terminal displays and generated analysis artifacts. Advanced mode now provides structured JSON export of TracerSET events. JSONL export is not currently provided.
+- Current output consists of terminal displays and generated analysis artifacts, written to the current directory: `<stem>.cfg.dot`, `<stem>.ast.dot` and `<stem>.cst.dot`, and `.complexipy_cache/`. Advanced mode now provides structured JSON export of TracerSET events. JSONL export is not currently provided.
 
 ---
 

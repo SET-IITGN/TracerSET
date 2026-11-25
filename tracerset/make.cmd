@@ -34,6 +34,10 @@ for /d /r . %%d in (outputs) do (
     if exist "%%d" rd /s /q "%%d"
 )
 
+for /d /r . %%d in (.pytest_cache .complexipy_cache) do (
+    if exist "%%d" rd /s /q "%%d"
+)
+
 :: Remove matching files: .tmp, .svg, .dot, .cov*, .htm*, .gv, .json*
 del /f /q *.tmp 2>nul
 del /f /q *.svg 2>nul

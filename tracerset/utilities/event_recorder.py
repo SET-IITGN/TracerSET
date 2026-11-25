@@ -11,11 +11,16 @@ import time
 
 
 def type_name(value):
+    cls = type(value)
     try:
-        cls = type(value)
-        return type.__getattribute__(cls, "__module__") + "." + type.__getattribute__(cls, "__qualname__")
-    except Exception:
+        module = type.__dict__["__module__"].__get__(cls)
+        qualname = type.__dict__["__qualname__"].__get__(cls)
+    except (AttributeError, TypeError):
         return "unknown"
+
+    if type(module) is str and type(qualname) is str:
+        return module + "." + qualname
+    return "unknown"
 
 '''
 class Snapshot:
@@ -95,7 +100,8 @@ class Snapshot:
             )
             return result
 
-        if kind not in (dict, list, tuple, set, frozenset):
+        #if kind not in (dict, list, tuple, set, frozenset):
+        if not any(kind is exact for exact in (dict, list, tuple, set, frozenset)):
             result["opaque"] = True
             return result
 
@@ -284,7 +290,11 @@ class EventRecorder:
             record["source"] = linecache.getline(frame.f_code.co_filename, frame.f_lineno).rstrip("\r\n")
             if locals_view is not None:
                 record["locals_display_values"] = snap.bindings(locals_view)
-                record["globals_display_values"] = snap.bindings(globals_view)
+                #record["globals_display_values"] = snap.bindings(globals_view)
+                if record["locals_and_globals_same_namespace"]:
+                    record["globals_display_values"] = record["locals_display_values"]
+                else:
+                    record["globals_display_values"] = snap.bindings(globals_view)
                 record["binding_counts"] = {"locals": len(locals_view), "globals": len(globals_view)}
                 '''
                 record["binding_identity"] = {
@@ -314,7 +324,9 @@ class EventRecorder:
                         #"ast_fragment": self.ast_fragment(ast_root, frame.f_lineno, [1000]),
                         "ast_fragment": self.ast_fragment(ast_root, frame.f_lineno),                        
                         "bytecode": [{"offset": ins.offset, "opname": ins.opname, "arg": ins.arg,
-                                      "argval": snap.copy(ins.argval), "starts_line": ins.starts_line}
+                                      "argval": snap.copy(ins.argval),
+                                      "starts_line": (ins.line_number if ins.starts_line else None)
+                                                     if hasattr(ins, "line_number") else ins.starts_line}
                                      for ins in (instructions or [])]}
             elif event == "return":
                 record["return_value"] = snap.copy(arg)

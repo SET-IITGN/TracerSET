@@ -9,7 +9,7 @@ import io
 import tokenize
 from collections import defaultdict
 import ast
-from event_recorder import EventRecorder
+from event_recorder import EventRecorder, type_name
 
 COLOR = "\033[93m"
 ERROR = "\033[91m"
@@ -25,7 +25,7 @@ MODE_ADVANCED = "advanced"
 MODE=''
 
 def clear_screen():
-    if sys.stdin.isatty():
+    if sys.stdin.isatty() and sys.stdout.isatty():
         rows = os.get_terminal_size().lines
         # Natural scroll
         for _ in range(rows-1):
@@ -34,7 +34,7 @@ def clear_screen():
         print("\033[H", end="", flush=True)
 
 def getch():
-    if sys.stdin.isatty():
+    if sys.stdin.isatty() and sys.stdout.isatty():
         sys.stdin.read(1)
         clear_screen()
         
@@ -52,6 +52,54 @@ def safe_call(fn):
         return fn()
     except Exception:
         return "<unavailable>"
+
+class _Label:
+    def __init__(self, text): self.text = text
+    def __repr__(self): return self.text
+
+def _attrs_repr(obj):
+    shown = {}
+    for k, v in vars(obj).items():
+        try:
+            text = repr(v)
+        except Exception:
+            text = ''
+        if type(v).__module__ != 'builtins' and ' object at 0x' in text:
+            shown[k] = _Label(f'<{type(v).__name__} object>')
+        else:
+            shown[k] = v
+    return repr(shown)
+        
+def format_return_value(value, seen=frozenset()):
+    kind = type(value)
+    if value is None or any(kind is t for t in (
+        bool, int, float, complex, str, bytes, bytearray, range
+    )):
+        return repr(value)
+
+    if not any(kind is t for t in (list, tuple, dict, set, frozenset)):
+        return f"<{type_name(value)}>"
+
+    oid = id(value)
+    if oid in seen:
+        return "[...]" if kind is list else "{...}" if kind is dict else "(...)"
+    path = seen | {oid}
+
+    if kind is dict:
+        pairs = (
+            f"{format_return_value(k, path)}: {format_return_value(v, path)}"
+            for k, v in value.items()
+        )
+        return "{" + ", ".join(pairs) + "}"
+
+    parts = ", ".join(format_return_value(item, path) for item in value)
+    if kind is list:
+        return f"[{parts}]"
+    if kind is tuple:
+        return f"({parts}{',' if len(value) == 1 else ''})"
+    if kind is set:
+        return f"{{{parts}}}" if value else "set()"
+    return f"frozenset({{{parts}}})" if value else "frozenset()"
 
 class VariableTracer:
     def __init__(self, script_path):
@@ -366,12 +414,14 @@ class VariableTracer:
                     value_repr = "<unavailable>"
                     try:
                         value_repr = repr(value)
-                        if ' object ' in value_repr:
+                        #if ' object ' in value_repr:
+                        if type(value) is not str and ' object ' in value_repr:
                             xbuff = value_repr.split('__main__.')[1]
                             xbuff = xbuff.split('object')[0]
-                            xbuff = '<' + xbuff + f'object>{vars(value)}'
+                            xbuff = '<' + xbuff + f'object>{_attrs_repr(value)}'
                             value_repr = xbuff
-                        elif '<class' in value_repr:
+                        #elif '<class' in value_repr:
+                        elif type(value) is not str and '<class' in value_repr:
                             def transform(v, k):
                                 if 'function' in v:
                                     #return '<function>'
@@ -628,10 +678,25 @@ class VariableTracer:
 
             return type(node).__name__
         
+        def transform(v, k):
+                if isinstance(v,str):
+                    if '<module' in v:
+                        return '<module>'
+                    if '<function' in v and 'class' not in v:
+                        return v
+                        #return '<function>'
+                elif not isinstance(v,str):
+                    if '<module' in repr(v):
+                        return '<module>'
+                    if '<function' in repr(v) and 'class' not in repr(v):
+                        return v
+                        #return '<function>'
+                return v
+        
         def get_filtered_vars(frame):
             globals_raw = self._safe_repr_dict(frame.f_globals)
-            locals_raw = self._safe_repr_dict(frame.f_locals)
-
+            #locals_raw = self._safe_repr_dict(frame.f_locals)
+            '''
             def transform(v, k):
                 if isinstance(v,str):
                     if '<module' in v:
@@ -646,7 +711,7 @@ class VariableTracer:
                         return v
                         #return '<function>'
                 return v
-
+            '''
             globals_dict = {
                 k: transform(v, k)
                 for k, v in globals_raw.items()
@@ -658,6 +723,11 @@ class VariableTracer:
                 for k, v in globals_raw.items()
                 if k in self.user_vars
             })
+
+            if frame.f_locals is frame.f_globals:
+                return globals_dict, globals_dict.copy()
+            
+            locals_raw = self._safe_repr_dict(frame.f_locals)
 
             locals_dict = {
                 k: transform(v, k)
@@ -874,9 +944,17 @@ class VariableTracer:
                 for ins in instructions:
 
                     # CPython marks beginning of source line
+                    '''
                     if ins.starts_line is not None:
                         current_line = ins.starts_line
-
+                    '''
+                    if hasattr(ins, "line_number"):
+                        line_start = ins.line_number if ins.starts_line else None
+                    else:
+                        line_start = ins.starts_line
+                    if line_start is not None:
+                        current_line = line_start                    
+                    
                     if current_line == line_no:
                         result.append(ins)
 
@@ -1042,7 +1120,11 @@ class VariableTracer:
                 '''
                 args_str = call_signatures.get(id(frame), "")
                 try:
-                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {repr(arg)}{RESET}")
+                    #return_text = format_return_value(arg)
+                    value = self._safe_repr_dict({"return_value": arg})["return_value"]
+                    return_text = repr(transform(value, "return_value"))                    
+                    
+                    print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : {return_text}{RESET}")
                 except Exception:
                     print(f"{indent}│   {CURR}{func_name}({args_str if '<module>' not in func_name else ''}) RETurned : <unrepr-able>{RESET}")
                 
@@ -1058,7 +1140,7 @@ class VariableTracer:
                 
                 call_depth -= 1
                 
-                if sys.stdin.isatty():
+                if sys.stdin.isatty() and sys.stdout.isatty():
                     print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                     getch()
                 
@@ -1085,7 +1167,7 @@ class VariableTracer:
                 print(f"{indent}│   Type  : {ERROR}{exc_type.__name__}{RESET}")
                 print(f"{indent}│   Value : {ERROR}{exc_value}{RESET}")
 
-                if sys.stdin.isatty():
+                if sys.stdin.isatty() and sys.stdout.isatty():
                     print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                     getch()
 
@@ -1253,7 +1335,8 @@ class VariableTracer:
                             argval = ""
                             if ins.argval is not None:
                                 argval = repr(ins.argval)
-                                if ' object ' in argval:
+                                #if ' object ' in argval:
+                                if type(ins.argval) is not str and ' object ' in argval:
                                     #example: <code object f at 0x7f25ed642a20, ...>
                                     try:
                                         zbuff=argval.split(' at ')[0]
@@ -1278,7 +1361,7 @@ class VariableTracer:
                     print(f"{indent}│  ALIAS   : ",end='')
                     print_alias_graph(alias_sets)
                 print_stack(frame, active_only=False,switch=1)
-                if sys.stdin.isatty():
+                if sys.stdin.isatty() and sys.stdout.isatty():
                     print(f"\n{COLOR}Press Enter key to continue to next statement{RESET}")
                     getch()
                 
@@ -1286,13 +1369,26 @@ class VariableTracer:
             return tracer
         return tracer
     
-    def _safe_repr_dict(self, dct):
+    def _safe_repr_dict(self, dct, _list_memo=None):
         """Safely convert dictionary values to repr strings."""
+        in_list = _list_memo is not None
+        if _list_memo is None:
+            _list_memo = {}
+            
         result = {}
         for k, v in dct.items():
             try:
                 #result[k] = repr(v)
-                if isinstance(v, types.FunctionType):
+                if type(v) is list:
+                    oid = id(v)
+                    if oid not in _list_memo:
+                        snapshot = _list_memo[oid] = []
+                        elements = self._safe_repr_dict(
+                            dict(enumerate(v)), _list_memo
+                        )
+                        snapshot.extend(elements.values())
+                    result[k] = _list_memo[oid]                
+                elif isinstance(v, types.FunctionType):
                     '''
                     result[k] = f"<function {v.__name__}>" #reduce-noise
                     '''
@@ -1318,13 +1414,13 @@ class VariableTracer:
                             result[k] = f"<function {v.__name__}>"
                     except Exception:
                         result[k] = f"<function {v.__name__}>"
-                elif ' object ' in repr(v):
+                elif type(v) is not str and ' object ' in repr(v):
                     #example: <__main__.Animal object at 0x7f339319a590>
                     buff=repr(v).split('__main__.')[1]
                     #example: <__main__.Animal object at 0x7f339319a590>
                     buff=buff.split('object')[0]
                     #'Animal '
-                    buff='<'+buff+f'object>{vars(v)}'
+                    buff='<'+buff+f'object>{_attrs_repr(v)}'
                     result[k] = buff
                 #elif '<class ' in repr(v):
                 elif isinstance(v, type) and self.is_user_defined_class(v):
@@ -1372,7 +1468,7 @@ class VariableTracer:
                     }
                     xbuff = f'<class>{temp_dict}'
                     result[k] = xbuff
-                elif is_file_like(v):
+                elif not in_list and is_file_like(v):
                     try:
                         result[k] = f"<type='{type(v).__name__}' name='{v.name}' "
                         result[k] +=f"mode='{v.mode}' "
@@ -1421,6 +1517,8 @@ class VariableTracer:
         return result
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     if len(sys.argv) != 3:
         print(f'''{COLOR}Usage:
        python3 detailed.py beginner <file.py> 
